@@ -1,0 +1,62 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Estoque</h1>
+</div>
+
+<form method="get" action="/estoque" class="row g-2 mb-3">
+  <div class="col-6 col-md-3">
+    <select class="form-select" name="tipo">
+      <option value="">Todos os tipos</option>
+      <% tipos.forEach(function (t) { %>
+        <option value="<%= t %>" <%= tipo === t ? 'selected' : '' %>><%= rotulos[t] %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="col-6 col-md-3">
+    <select class="form-select" name="status">
+      <option value="">Todos os status</option>
+      <option value="ok" <%= status === 'ok' ? 'selected' : '' %>>Dentro do mínimo</option>
+      <option value="baixo" <%= status === 'baixo' ? 'selected' : '' %>>Abaixo do mínimo</option>
+    </select>
+  </div>
+  <div class="col-12 col-md-3">
+    <button type="submit" class="btn btn-outline-primary w-100">Filtrar</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Tipo</th>
+        <th class="text-end">Quantidade disponível</th>
+        <th class="text-end">Estoque mínimo</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!itens.length) { %>
+        <tr><td colspan="4" class="text-center text-muted">Nenhum item encontrado.</td></tr>
+      <% } %>
+      <% itens.forEach(function (item) { %>
+        <tr>
+          <td><%= rotulos[item.tipo_doacao] || item.tipo_doacao %></td>
+          <td class="text-end"><%= item.quantidade %></td>
+          <td class="text-end">
+            <form method="post" action="/estoque/<%= item.tipo_doacao %>/minimo?_method=PUT" class="d-inline-flex align-items-center gap-1">
+              <input type="hidden" name="_method" value="PUT">
+              <input type="number" step="0.01" min="0" class="form-control form-control-sm" name="estoque_minimo" value="<%= item.estoque_minimo %>" style="width: 100px;">
+              <button type="submit" class="btn btn-sm btn-outline-secondary">Salvar</button>
+            </form>
+          </td>
+          <td>
+            <% if (item.abaixo_minimo) { %>
+              <span class="badge text-bg-danger">Estoque abaixo do mínimo</span>
+            <% } else { %>
+              <span class="badge text-bg-success">OK</span>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
