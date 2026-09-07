@@ -1,13 +1,14 @@
 // seed.js — cria o usuário administrador inicial (idempotente).
 //
-// Como o módulo de autenticação ainda não existe (Sprint 1), este script apenas
-// deixa o registro pronto no banco para o primeiro login.
+// O registro usa a tabela `usuario` real (002_usuario.sql) com senha hasheada
+// em bcrypt custo 12 (RNF_02), permitindo o primeiro login do admin.
 //
 // Variáveis de ambiente: ADMIN_PASSWORD (senha), ADMIN_EMAIL (default admin@conectabem.net).
+import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
+import { pool } from '../src/config/db.js';
 
-require('dotenv').config();
-const bcrypt = require('bcryptjs');
-const { pool } = require('../src/config/db');
+dotenv.config();
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@conectabem.net';
 const ADMIN_NAME = process.env.ADMIN_NAME || 'Administrador';
@@ -20,9 +21,7 @@ async function run() {
     return;
   }
 
-  const [rows] = await pool.query('SELECT `id` FROM `usuario` WHERE `email` = ?', [
-    ADMIN_EMAIL,
-  ]);
+  const [rows] = await pool.query('SELECT `id` FROM `usuario` WHERE `email` = ?', [ADMIN_EMAIL]);
 
   if (rows.length > 0) {
     console.log(`[seed] usuário admin já existe (${ADMIN_EMAIL}); nada a fazer.`);

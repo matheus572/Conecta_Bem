@@ -3,18 +3,20 @@
 // Lê os arquivos .sql numerados da pasta migrations/ em ordem e aplica apenas
 // os pendentes, registrando cada um na tabela `_migrations` (001_init.sql).
 //
-// Uso: node migrations/migrate.js
-// Variáveis de ambiente: ver config/env.js (DB_*).
+// Uso (CLI): node migrations/migrate.js
+// Uso (programático): import { runMigrations } from './migrate.js';
+//   await runMigrations(pool) — usado pelos testes de integração (db-test).
+//
+// O pool é usado conforme config/env.js; nos testes, o env é apontado para o
+// banco de teste antes da importação.
 
-const fs = require('node:fs');
-const path = require('node:path');
-const { pool } = require('../src/config/db');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const MIGRATIONS_DIR = __dirname;
+const MIGRATIONS_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 async function getAppliedMigrationNames(conn) {
-  // Garante que a tabela de controle exista antes de consultar (caso ela
-  // própria ainda não tenha sido aplicada por outro caminho).
   await conn.query(
     `CREATE TABLE IF NOT EXISTS \`_migrations\` (
       \`name\` VARCHAR(255) NOT NULL,
@@ -26,13 +28,13 @@ async function getAppliedMigrationNames(conn) {
   return new Set(rows.map((row) => row.name));
 }
 
-async function run() {
+/** Aplica as migrations pendentes. Não encerra o pool (quem chama é dono dele). */
+async function runMigrations(pool) {
   const files = fs
     .readdirSync(MIGRATIONS_DIR)
     .filter((f) => /^\d+.*\.sql$/.test(f) && f !== '001_init.sql')
     .sort();
 
-  // 001_init.sql roda primeiro e sempre, pois cria a própria tabela de controle.
   const initFile = '001_init.sql';
   const orderedFiles = [initFile, ...files];
 
@@ -52,11 +54,21 @@ async function run() {
     console.log('[migrate] migrations em dia.');
   } finally {
     conn.release();
-    await pool.end();
   }
 }
 
-run().catch((err) => {
-  console.error('[migrate] erro:', err);
-  process.exit(1);
-});
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMain) {
+  const { pool } = await import('../src/config/db.js');
+  try {
+    await runMigrations(pool);
+    await pool.end();
+  } catch (err) {
+    console.error('[migrate] erro:', err);
+    await pool.end();
+    process.exit(1);
+  }
+}
+
+export { runMigrations };
