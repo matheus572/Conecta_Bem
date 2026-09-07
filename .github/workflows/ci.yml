@@ -25,11 +25,12 @@ jobs:
           --health-retries 20
 
     env:
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_USER: conectabem_test
-      DB_PASSWORD: conectabem_test_dev
-      DB_NAME: conectabem_test
+      # Usados pelos testes (via tests/setup.js, que lê DB_TEST_*).
+      DB_TEST_HOST: 127.0.0.1
+      DB_TEST_PORT: 3306
+      DB_TEST_USER: conectabem_test
+      DB_TEST_PASSWORD: conectabem_test_dev
+      DB_TEST_NAME: conectabem_test
 
     steps:
       - uses: actions/checkout@v4
@@ -44,9 +45,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
-
-      - name: Aplicar migrations (sms e validação do runner)
-        run: node migrations/migrate.js
 
       - name: Testes
         run: npm test

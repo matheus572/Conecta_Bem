@@ -1,6 +1,6 @@
 // config/db.js — pool de conexões MySQL (mysql2), única porta de entrada para o banco.
-const mysql = require('mysql2/promise');
-const { env } = require('./env');
+import mysql from 'mysql2/promise';
+import { env } from './env.js';
 
 const pool = mysql.createPool({
   host: env.db.host,
@@ -13,4 +13,4 @@ const pool = mysql.createPool({
   charset: 'utf8mb4',
 });
 
-module.exports = { pool };
+export { pool };

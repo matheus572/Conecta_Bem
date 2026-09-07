@@ -1,5 +1,5 @@
 // middlewares/errorHandler.js — tratamento central de erros HTTP.
-const createError = require('http-errors');
+import createError from 'http-errors';
 
 function notFoundHandler(req, res, next) {
   next(createError(404));
@@ -26,4 +26,4 @@ function errorHandler(err, req, res, next) {
   res.json({ error: { status, message: err.message } });
 }
 
-module.exports = { notFoundHandler, errorHandler };
+export { notFoundHandler, errorHandler };

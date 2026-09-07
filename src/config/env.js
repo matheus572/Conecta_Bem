@@ -1,8 +1,12 @@
 // config/env.js — carrega e normaliza as variáveis de ambiente.
-const path = require('node:path');
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Carrega o .env da raiz do projeto, se existir (ex.: execução fora do container).
-require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env') });
+dotenv.config({ path: path.resolve(__dirname, '..', '..', '.env') });
 
 const env = {
   app: {
@@ -20,13 +24,6 @@ const env = {
     password: process.env.DB_PASSWORD || 'conectabem_dev',
     database: process.env.DB_NAME || 'conectabem',
   },
-  dbTest: {
-    host: process.env.DB_TEST_HOST || 'localhost',
-    port: parseInt(process.env.DB_TEST_PORT || '3307', 10),
-    user: process.env.DB_TEST_USER || 'conectabem_test',
-    password: process.env.DB_TEST_PASSWORD || 'conectabem_test_dev',
-    database: process.env.DB_TEST_NAME || 'conectabem_test',
-  },
 };
 
-module.exports = { env };
+export { env };
