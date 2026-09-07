@@ -6,7 +6,25 @@ import { pool } from '../../src/config/db.js';
 import { sessionStore } from '../../src/config/session.js';
 import { runMigrations } from '../../migrations/migrate.js';
 
-const TABELAS_NEGOCIO = ['atendimento', 'doador', 'beneficiario', 'usuario'];
+const TABELAS_NEGOCIO = [
+  'distribuicao',
+  'doacao',
+  'estoque',
+  'atendimento',
+  'doador',
+  'beneficiario',
+  'usuario',
+];
+
+async function seedEstoque() {
+  await pool.query(
+    `INSERT INTO \`estoque\` (\`tipo_doacao\`, \`quantidade\`, \`estoque_minimo\`) VALUES
+      ('ALIMENTOS', 0, 0),
+      ('ROUPAS', 0, 0),
+      ('MOVEIS_UTENSILIOS', 0, 0),
+      ('OUTROS', 0, 0)`,
+  );
+}
 
 async function seedUsuarios() {
   const adminHash = await bcrypt.hash('admin123', 12);
@@ -31,6 +49,7 @@ async function resetDatabase() {
   }
   await pool.query('SET FOREIGN_KEY_CHECKS = 1');
 
+  await seedEstoque();
   await seedUsuarios();
 }
 
