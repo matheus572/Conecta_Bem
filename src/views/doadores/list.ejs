@@ -1,0 +1,57 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Doadores</h1>
+  <a href="/doadores/novo" class="btn btn-primary">Novo doador</a>
+</div>
+
+<form method="get" action="/doadores" class="row g-2 mb-3">
+  <div class="col-12 col-md-5">
+    <input type="text" class="form-control" name="q" value="<%= q %>" placeholder="Buscar por nome ou CPF/CNPJ">
+  </div>
+  <div class="col-6 col-md-3">
+    <select class="form-select" name="tipo">
+      <option value="">Todos os tipos</option>
+      <option value="PF" <%= tipo === 'PF' ? 'selected' : '' %>>Pessoa física</option>
+      <option value="PJ" <%= tipo === 'PJ' ? 'selected' : '' %>>Pessoa jurídica</option>
+    </select>
+  </div>
+  <div class="col-6 col-md-4">
+    <button type="submit" class="btn btn-outline-primary w-100">Filtrar</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Tipo</th>
+        <th>CPF/CNPJ</th>
+        <th>Telefone</th>
+        <% if (currentUser.perfil === 'ADMINISTRADOR') { %><th class="text-end">Ações</th><% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!doadores.length) { %>
+        <tr><td colspan="<%= currentUser.perfil === 'ADMINISTRADOR' ? 5 : 4 %>" class="text-center text-muted">Nenhum doador encontrado.</td></tr>
+      <% } %>
+      <% doadores.forEach(function (d) { %>
+        <tr>
+          <td><%= d.nome %></td>
+          <td><%= d.tipo_doador === 'PF' ? 'Pessoa física' : 'Pessoa jurídica' %></td>
+          <td><%= d.documento %></td>
+          <td><%= d.telefone || '—' %></td>
+          <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+            <td class="text-end text-nowrap">
+              <a href="/doadores/<%= d.id %>/editar" class="btn btn-sm btn-outline-secondary">Editar</a>
+              <form method="post" action="/doadores/<%= d.id %>?_method=DELETE" class="d-inline"
+                onsubmit="return confirm('Excluir este doador?')">
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+              </form>
+            </td>
+          <% } %>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
