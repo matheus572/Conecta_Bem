@@ -1,0 +1,55 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Distribuições</h1>
+  <div class="d-flex gap-2">
+    <a href="/doacoes" class="btn btn-outline-primary">Doações recebidas</a>
+    <a href="/doacoes/distribuicoes/nova" class="btn btn-primary">Registrar distribuição</a>
+  </div>
+</div>
+
+<form method="get" action="/doacoes/distribuicoes" class="row g-2 mb-3">
+  <div class="col-12 col-md-3">
+    <select class="form-select" name="tipo">
+      <option value="">Todos os tipos</option>
+      <% tipos.forEach(function (t) { %>
+        <option value="<%= t.valor %>" <%= tipo === t.valor ? 'selected' : '' %>><%= t.rotulo %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="col-6 col-md-3">
+    <input type="date" class="form-control" name="inicio" value="<%= inicio %>">
+  </div>
+  <div class="col-6 col-md-3">
+    <input type="date" class="form-control" name="fim" value="<%= fim %>">
+  </div>
+  <div class="col-12 col-md-3">
+    <button type="submit" class="btn btn-outline-primary w-100">Filtrar</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Tipo</th>
+        <th>Beneficiário</th>
+        <th class="text-end">Quantidade</th>
+        <th>Descrição</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!distribuicoes.length) { %>
+        <tr><td colspan="5" class="text-center text-muted">Nenhuma distribuição encontrada.</td></tr>
+      <% } %>
+      <% distribuicoes.forEach(function (d) { %>
+        <tr>
+          <td><%= d.data_distribuicao %></td>
+          <td><%= d.tipo_doacao %></td>
+          <td><%= d.beneficiario_nome %></td>
+          <td class="text-end"><%= d.quantidade %></td>
+          <td><%= d.descricao || '—' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

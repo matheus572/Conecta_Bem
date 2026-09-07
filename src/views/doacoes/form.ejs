@@ -1,0 +1,51 @@
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <h1 class="h3 mb-3">Registrar doação</h1>
+
+    <% if (typeof erro !== 'undefined' && erro) { %>
+      <div class="alert alert-danger"><%= erro %></div>
+    <% } %>
+
+    <form method="post" action="/doacoes" novalidate>
+      <div class="mb-3">
+        <label for="doador_id" class="form-label">Doador</label>
+        <select class="form-select" id="doador_id" name="doador_id" required>
+          <option value="">Selecione…</option>
+          <% doadores.forEach(function (d) { %>
+            <option value="<%= d.id %>" <%= String(form.doador_id) === String(d.id) ? 'selected' : '' %>><%= d.nome %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="tipo_doacao" class="form-label">Tipo</label>
+        <select class="form-select" id="tipo_doacao" name="tipo_doacao" required>
+          <option value="">Selecione…</option>
+          <% tipos.forEach(function (t) { %>
+            <option value="<%= t.valor %>" <%= form.tipo_doacao === t.valor ? 'selected' : '' %>><%= t.rotulo %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="quantidade" class="form-label">Quantidade</label>
+        <input type="number" step="0.01" min="0.01" class="form-control" id="quantidade" name="quantidade" value="<%= form.quantidade || '' %>" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="data_doacao" class="form-label">Data</label>
+        <input type="date" class="form-control" id="data_doacao" name="data_doacao" value="<%= form.data_doacao || '' %>">
+      </div>
+
+      <div class="mb-3">
+        <label for="descricao" class="form-label">Descrição</label>
+        <input type="text" class="form-control" id="descricao" name="descricao" value="<%= form.descricao || '' %>">
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a href="/doacoes" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>

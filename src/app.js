@@ -16,6 +16,8 @@ import authRoutes from './modules/auth/auth.routes.js';
 import usuariosRoutes from './modules/usuarios/usuarios.routes.js';
 import beneficiariosRoutes from './modules/beneficiarios/beneficiarios.routes.js';
 import doadoresRoutes from './modules/doadores/doadores.routes.js';
+import doacoesRoutes from './modules/doacoes/doacoes.routes.js';
+import estoqueRoutes from './modules/estoque/estoque.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -59,6 +61,8 @@ app.get('/', (req, res) => {
 app.use('/usuarios', usuariosRoutes);
 app.use('/beneficiarios', beneficiariosRoutes);
 app.use('/doadores', doadoresRoutes);
+app.use('/doacoes', doacoesRoutes);
+app.use('/estoque', estoqueRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
