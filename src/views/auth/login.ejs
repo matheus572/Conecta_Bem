@@ -1,0 +1,29 @@
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+    <div class="card mt-4 shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3 text-center">Entrar no <%= appName %></h1>
+
+        <% if (typeof erro !== 'undefined' && erro) { %>
+          <div class="alert alert-danger"><%= erro %></div>
+        <% } %>
+
+        <form method="post" action="/login" novalidate>
+          <div class="mb-3">
+            <label for="email" class="form-label">E-mail</label>
+            <input type="email" class="form-control" id="email" name="email" value="<%= typeof email !== 'undefined' ? email : '' %>" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label for="senha" class="form-label">Senha</label>
+            <input type="password" class="form-control" id="senha" name="senha" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Entrar</button>
+        </form>
+
+        <p class="text-center small mt-3 mb-0">
+          <a href="/forgot-password">Esqueci minha senha</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

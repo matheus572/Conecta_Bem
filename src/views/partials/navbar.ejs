@@ -1,0 +1,28 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">ConectaBem.net</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navPrincipal"
+      aria-controls="navPrincipal" aria-expanded="false" aria-label="Alternar navegação">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navPrincipal">
+      <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="/beneficiarios">Beneficiários</a></li>
+          <li class="nav-item"><a class="nav-link" href="/doadores">Doadores</a></li>
+          <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+            <li class="nav-item"><a class="nav-link" href="/usuarios">Usuários</a></li>
+          <% } %>
+        </ul>
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-white small d-none d-lg-inline">
+            <%= currentUser.nome %> (<%= currentUser.perfil === 'ADMINISTRADOR' ? 'Administrador' : 'Colaborador' %>)
+          </span>
+          <form method="post" action="/logout" class="mb-0">
+            <button type="submit" class="btn btn-outline-light btn-sm">Sair</button>
+          </form>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</nav>
