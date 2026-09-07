@@ -11,6 +11,8 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   charset: 'utf8mb4',
+  // Colunas DECIMAL (uso no estoque/doações) retornam como Number, não string.
+  decimalNumbers: true,
 });
 
 export { pool };
