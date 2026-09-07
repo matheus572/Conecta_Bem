@@ -74,6 +74,75 @@ motivo e onde isso se reflete no código.
 
 ---
 
+## Sprint 2 — Doações e Estoque
+
+Antes de codar, os três pontos listados como risco no plano (§8 e §9) foram
+**confirmados com o time** por meio de pergunta direta. As respostas estão
+abaixo e detalham o desenho adotado.
+
+### 8. Estoque controlado por TIPO de doação (não por item)
+- **Decisão**: `estoque` é agregado por `tipo_doacao`
+  (`ALIMENTOS`, `ROUPAS`, `MOVEIS_UTENSILIOS`, `OUTROS`), com uma linha por
+  tipo, `quantidade` (saldo) e `estoque_minimo` (RF_16). Não há `item_doacao`.
+- **Motivo**: interpretação mais simples e conservadora que preserva a
+  documentação — RF_13 lista apenas tipos (não itens), e o DER (§10.2) liga
+  "Uma doação pode atualizar vários itens do estoque" sem nunca modelar os
+  itens (pergunta em aberto nº 2 do plano). O controle por item, se necessário,
+  fica para sprint futura.
+- **Consequência**: os campos `nome_item`/`unidade`/`localizacao` do modelo
+  conceitual (§10.1) foram substituídos por uma linha por tipo; `unidade` é
+  tratada como "unidades" genéricas.
+- **Onde**: `migrations/007_estoque.sql`, `src/modules/estoque/*`.
+
+### 9. Doações em dinheiro fora do escopo desta sprint
+- **Decisão**: doação monetária **não** entra na Sprint 2. A coluna `valor`
+  existe em `doacao` (NULL, não exposta nas telas) para preservar o modelo
+  conceitual, mas não há fluxo de entrada de dinheiro.
+- **Motivo**: RF_13 lista apenas bens (alimentos, roupas, móveis e utensílios,
+  outros); "doação monetária" já estava como pergunta em aberto no plano
+  (§9.6/§8.6). Além disso, dinheiro não gera estoque por tipo, o que exigiria
+  regras próprias fora do escopo atual.
+- **Onde**: `migrations/006_doacao.sql` (coluna `valor` reservada).
+
+### 10. Estoque mínimo (RF_16/RF_S04) por TIPO
+- **Decisão**: `estoque_minimo` é um valor por tipo de doação, editável na tela
+  de estoque. Alerta visual ("Estoque abaixo do mínimo") quando
+  `quantidade < estoque_minimo`; sem notificação por e-mail (SMTP fora do MVP).
+- **Motivo**: acompanha a granularidade por tipo decidida acima; RF_16 fala em
+  "estoque de determinado tipo de doação".
+- **Onde**: `src/modules/estoque/*`, `src/views/estoque/list.ejs`.
+
+### 11. "Status" do RF_17 interpretado como status do estoque
+- **Decisão**: a filtragem por "tipo, período e **status**" (RF_17) foi
+  distribuída da seguinte forma: listas de doações e de distribuições filtram
+  por tipo + período (data inicial/final); a tela de estoque filtra por tipo +
+  status ("dentro do mínimo" / "abaixo do mínimo").
+- **Motivo**: com estoque agregado por tipo, a doação/distribuição não possui
+  um campo "status" próprio no modelo; o "status" mais natural do módulo é a
+  condição do estoque (RF_S04). Registrado como interpretação a validar.
+- **Onde**: `src/modules/doacoes/doacoes.controller.js`,
+  `src/modules/estoque/estoque.controller.js`.
+
+### 12. Transações com `conn` opcional nos repositories
+- **Decisão**: os métodos de escrita dos repositories de doações/estoque
+  recebem uma `conn` opcional (default `pool`); o service obtém
+  `pool.getConnection()` → `beginTransaction` → operações → `commit`/`rollback`,
+  e a leitura de saldo da distribuição usa `SELECT ... FOR UPDATE`.
+- **Motivo**: manter "SQL só no repository" (§1.3) e ao mesmo tempo permitir
+  transações reais e bloqueio de linha (RN03 / seção 2 do plano), evitando
+  condição de corrida entre duas distribuições simultâneas.
+- **Onde**: `src/modules/estoque/estoque.repository.js`,
+  `src/modules/doacoes/doacoes.{repository,service}.js`.
+
+### 13. `decimalNumbers: true` no pool do mysql2
+- **Decisão**: habilitado `decimalNumbers: true` na configuração do pool.
+- **Motivo**: colunas `DECIMAL` (quantidade/estoque_minimo) retornavam como
+  string por padrão no mysql2, complicando comparações (saldo vs. quantidade) e
+  soma/subtração. A conversão nativa para `Number` simplificou a lógica de RN03.
+- **Onde**: `src/config/db.js`.
+
+---
+
 ## Combinados na conversa, ainda não totalmente refletidos em código
 
 - **Reset de senha manual pelo admin no MVP (RF_03 adiado)**: combinação
