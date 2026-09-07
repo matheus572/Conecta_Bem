@@ -1,0 +1,54 @@
+<%
+  const editando = beneficiario !== null;
+  const v = editando ? beneficiario : form;
+  const action = editando ? '/beneficiarios/' + beneficiario.id : '/beneficiarios';
+  const method = editando ? 'PUT' : 'POST';
+%>
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <h1 class="h3 mb-3"><%= editando ? 'Editar beneficiário' : 'Novo beneficiário' %></h1>
+
+    <% if (typeof erro !== 'undefined' && erro) { %>
+      <div class="alert alert-danger"><%= erro %></div>
+    <% } %>
+
+    <form method="post" action="<%= action %>" novalidate>
+      <input type="hidden" name="_method" value="<%= method %>">
+
+      <div class="mb-3">
+        <label for="nome" class="form-label">Nome completo</label>
+        <input type="text" class="form-control" id="nome" name="nome" value="<%= v.nome || '' %>" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="cpf" class="form-label">CPF</label>
+        <input type="text" class="form-control" id="cpf" name="cpf" value="<%= v.cpf || '' %>" placeholder="000.000.000-00" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="data_nascimento" class="form-label">Data de nascimento</label>
+        <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" value="<%= v.data_nascimento ? String(v.data_nascimento).slice(0, 10) : '' %>">
+      </div>
+
+      <div class="mb-3">
+        <label for="telefone" class="form-label">Telefone</label>
+        <input type="text" class="form-control" id="telefone" name="telefone" value="<%= v.telefone || '' %>">
+      </div>
+
+      <div class="mb-3">
+        <label for="endereco" class="form-label">Endereço</label>
+        <input type="text" class="form-control" id="endereco" name="endereco" value="<%= v.endereco || '' %>">
+      </div>
+
+      <div class="mb-3">
+        <label for="situacao_social" class="form-label">Situação social</label>
+        <textarea class="form-control" id="situacao_social" name="situacao_social" rows="2"><%= v.situacao_social || '' %></textarea>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a href="/beneficiarios" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>

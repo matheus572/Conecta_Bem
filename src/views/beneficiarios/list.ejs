@@ -1,0 +1,55 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Beneficiários</h1>
+  <a href="/beneficiarios/novo" class="btn btn-primary">Novo beneficiário</a>
+</div>
+
+<form method="get" action="/beneficiarios" class="row g-2 mb-3">
+  <div class="col-12 col-md-6">
+    <input type="text" class="form-control" name="q" value="<%= q %>" placeholder="Buscar por nome ou CPF">
+  </div>
+  <div class="col-6 col-md-3">
+    <select class="form-select" name="status">
+      <option value="">Todos os status</option>
+      <option value="ativo" <%= status === 'ativo' ? 'selected' : '' %>>Ativo</option>
+      <option value="inativo" <%= status === 'inativo' ? 'selected' : '' %>>Inativo</option>
+    </select>
+  </div>
+  <div class="col-6 col-md-3">
+    <button type="submit" class="btn btn-outline-primary w-100">Filtrar</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>CPF</th>
+        <th>Telefone</th>
+        <th>Status</th>
+        <th class="text-end">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!beneficiarios.length) { %>
+        <tr><td colspan="5" class="text-center text-muted">Nenhum beneficiário encontrado.</td></tr>
+      <% } %>
+      <% beneficiarios.forEach(function (b) { %>
+        <tr>
+          <td><%= b.nome %></td>
+          <td><%= b.cpf %></td>
+          <td><%= b.telefone || '—' %></td>
+          <td><span class="badge <%= b.ativo ? 'bg-success' : 'bg-secondary' %>"><%= b.ativo ? 'Ativo' : 'Inativo' %></span></td>
+          <td class="text-end text-nowrap">
+            <a href="/beneficiarios/<%= b.id %>/editar" class="btn btn-sm btn-outline-secondary">Editar</a>
+            <form method="post" action="/beneficiarios/<%= b.id %>?_method=DELETE" class="d-inline"
+              onsubmit="return confirm('Excluir este beneficiário?')">
+              <input type="hidden" name="_method" value="DELETE">
+              <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
