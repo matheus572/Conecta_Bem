@@ -1,0 +1,55 @@
+<%
+  const editando = campanha !== null;
+  const v = editando ? campanha : form;
+  const action = editando ? '/campanhas/' + campanha.id : '/campanhas';
+  const method = editando ? 'PUT' : 'POST';
+%>
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <h1 class="h3 mb-3"><%= editando ? 'Editar campanha' : 'Nova campanha' %></h1>
+
+    <% if (typeof erro !== 'undefined' && erro) { %>
+      <div class="alert alert-danger"><%= erro %></div>
+    <% } %>
+
+    <form method="post" action="<%= action %>" novalidate>
+      <input type="hidden" name="_method" value="<%= method %>">
+
+      <div class="mb-3">
+        <label for="titulo" class="form-label">Título</label>
+        <input type="text" class="form-control" id="titulo" name="titulo" value="<%= v.titulo || '' %>" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="descricao" class="form-label">Descrição</label>
+        <textarea class="form-control" id="descricao" name="descricao" rows="3"><%= v.descricao || '' %></textarea>
+      </div>
+
+      <div class="row">
+        <div class="col-12 col-md-6 mb-3">
+          <label for="data_inicio" class="form-label">Data de início</label>
+          <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="<%= v.data_inicio || '' %>" required>
+        </div>
+        <div class="col-12 col-md-6 mb-3">
+          <label for="data_fim" class="form-label">Data de término</label>
+          <input type="date" class="form-control" id="data_fim" name="data_fim" value="<%= v.data_fim || '' %>" required>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="status" class="form-label">Status</label>
+        <select class="form-select" id="status" name="status" required>
+          <option value="">Selecione…</option>
+          <option value="PLANEJADA" <%= v.status === 'PLANEJADA' ? 'selected' : '' %>>Planejada</option>
+          <option value="ATIVA" <%= v.status === 'ATIVA' ? 'selected' : '' %>>Ativa</option>
+          <option value="ENCERRADA" <%= v.status === 'ENCERRADA' ? 'selected' : '' %>>Encerrada</option>
+        </select>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a href="/campanhas" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>

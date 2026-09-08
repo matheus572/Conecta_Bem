@@ -66,7 +66,7 @@ async function registrarDoacao(dados, usuarioId = null) {
   }
 }
 
-async function registrarDistribuicao(dados, usuarioId = null) {
+async function registrarDistribuicao(dados, usuarioId = null, campanhaId = null) {
   validarTipo(dados.tipo_doacao);
   const quantidade = validarQuantidade(dados.quantidade);
   const data = normalizarData(dados.data_distribuicao);
@@ -90,6 +90,7 @@ async function registrarDistribuicao(dados, usuarioId = null) {
     await doacaoRepo.criarDistribuicao(
       {
         beneficiarioId,
+        campanhaId,
         tipo: dados.tipo_doacao,
         quantidade,
         descricao: String(dados.descricao || '').trim() || null,

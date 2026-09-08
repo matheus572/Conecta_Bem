@@ -76,9 +76,10 @@ async function criarDoacao(dados, conn = pool) {
 
 async function criarDistribuicao(dados, conn = pool) {
   const [result] = await conn.query(
-    'INSERT INTO distribuicao (beneficiario_id, tipo_doacao, quantidade, descricao, data_distribuicao, usuario_id) VALUES (?, ?, ?, ?, ?, ?)',
+    'INSERT INTO distribuicao (beneficiario_id, campanha_id, tipo_doacao, quantidade, descricao, data_distribuicao, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
     [
       dados.beneficiarioId,
+      dados.campanhaId || null,
       dados.tipo,
       dados.quantidade,
       dados.descricao,

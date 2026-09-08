@@ -1,0 +1,59 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Campanhas</h1>
+  <a href="/campanhas/nova" class="btn btn-primary">Nova campanha</a>
+</div>
+
+<form method="get" action="/campanhas" class="row g-2 mb-3">
+  <div class="col-6 col-md-3">
+    <select class="form-select" name="status">
+      <option value="">Todos os status</option>
+      <option value="PLANEJADA" <%= status === 'PLANEJADA' ? 'selected' : '' %>>Planejada</option>
+      <option value="ATIVA" <%= status === 'ATIVA' ? 'selected' : '' %>>Ativa</option>
+      <option value="ENCERRADA" <%= status === 'ENCERRADA' ? 'selected' : '' %>>Encerrada</option>
+    </select>
+  </div>
+  <div class="col-6 col-md-3">
+    <input type="date" class="form-control" name="inicio" value="<%= inicio %>" placeholder="Início">
+  </div>
+  <div class="col-6 col-md-3">
+    <input type="date" class="form-control" name="fim" value="<%= fim %>" placeholder="Término">
+  </div>
+  <div class="col-6 col-md-3">
+    <button type="submit" class="btn btn-outline-primary w-100">Filtrar</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Título</th>
+        <th>Início</th>
+        <th>Término</th>
+        <th>Status</th>
+        <th class="text-end">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!campanhas.length) { %>
+        <tr><td colspan="5" class="text-center text-muted">Nenhuma campanha encontrada.</td></tr>
+      <% } %>
+      <% campanhas.forEach(function (c) { %>
+        <tr>
+          <td><a href="/campanhas/<%= c.id %>"><%= c.titulo %></a></td>
+          <td><%= c.data_inicio %></td>
+          <td><%= c.data_fim %></td>
+          <td><%= rotulosStatus[c.status] || c.status %></td>
+          <td class="text-end text-nowrap">
+            <a href="/campanhas/<%= c.id %>/editar" class="btn btn-sm btn-outline-secondary">Editar</a>
+            <form method="post" action="/campanhas/<%= c.id %>?_method=DELETE" class="d-inline"
+              onsubmit="return confirm('Excluir esta campanha?')">
+              <input type="hidden" name="_method" value="DELETE">
+              <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

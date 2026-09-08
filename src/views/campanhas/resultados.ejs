@@ -1,0 +1,75 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Registrar resultados — <%= campanha.titulo %></h1>
+  <a href="/campanhas/<%= campanha.id %>" class="btn btn-outline-secondary">Voltar</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="h6 mb-0">Registrar beneficiário atendido</h2>
+      </div>
+      <div class="card-body">
+        <form method="post" action="/campanhas/<%= campanha.id %>/atendimentos" novalidate>
+          <div class="mb-3">
+            <label for="beneficiario_id" class="form-label">Beneficiário</label>
+            <select class="form-select" id="beneficiario_id" name="beneficiario_id" required>
+              <option value="">Selecione…</option>
+              <% beneficiarios.forEach(function (b) { %>
+                <option value="<%= b.id %>"><%= b.nome %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="data_atendimento" class="form-label">Data</label>
+            <input type="date" class="form-control" id="data_atendimento" name="data_atendimento" required>
+          </div>
+          <div class="mb-3">
+            <label for="descricao_at" class="form-label">Descrição</label>
+            <input type="text" class="form-control" id="descricao_at" name="descricao">
+          </div>
+          <button type="submit" class="btn btn-primary">Registrar atendimento</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="h6 mb-0">Registrar doação distribuída</h2>
+      </div>
+      <div class="card-body">
+        <form method="post" action="/campanhas/<%= campanha.id %>/distribuicoes" novalidate>
+          <div class="mb-3">
+            <label for="beneficiario_id_dist" class="form-label">Beneficiário</label>
+            <select class="form-select" id="beneficiario_id_dist" name="beneficiario_id" required>
+              <option value="">Selecione…</option>
+              <% beneficiarios.forEach(function (b) { %>
+                <option value="<%= b.id %>"><%= b.nome %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="tipo_doacao" class="form-label">Tipo</label>
+            <select class="form-select" id="tipo_doacao" name="tipo_doacao" required>
+              <option value="">Selecione…</option>
+              <% tipos.forEach(function (t) { %>
+                <option value="<%= t.valor %>"><%= t.rotulo %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="quantidade" class="form-label">Quantidade</label>
+            <input type="number" step="0.01" min="0.01" class="form-control" id="quantidade" name="quantidade" required>
+          </div>
+          <div class="mb-3">
+            <label for="data_distribuicao" class="form-label">Data</label>
+            <input type="date" class="form-control" id="data_distribuicao" name="data_distribuicao">
+          </div>
+          <button type="submit" class="btn btn-primary">Registrar distribuição</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

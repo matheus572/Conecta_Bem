@@ -1,0 +1,65 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Associar voluntários — <%= campanha.titulo %></h1>
+  <div class="d-flex gap-2">
+    <a href="/campanhas/<%= campanha.id %>" class="btn btn-outline-secondary">Voltar</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-6">
+    <h2 class="h5">Voluntários associados</h2>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr><th>Nome</th><th>Habilidades</th><th class="text-end">Ações</th></tr>
+        </thead>
+        <tbody>
+          <% if (!associados.length) { %>
+            <tr><td colspan="3" class="text-center text-muted">Nenhum voluntário associado.</td></tr>
+          <% } %>
+          <% associados.forEach(function (v) { %>
+            <tr>
+              <td><%= v.nome %></td>
+              <td><%= v.especialidade || '—' %></td>
+              <td class="text-end">
+                <form method="post" action="/campanhas/<%= campanha.id %>/voluntarios/<%= v.id %>?_method=DELETE" class="d-inline"
+                  onsubmit="return confirm('Remover este voluntário da campanha?')">
+                  <input type="hidden" name="_method" value="DELETE">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <h2 class="h5">Voluntários disponíveis</h2>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr><th>Nome</th><th>Habilidades</th><th class="text-end">Ações</th></tr>
+        </thead>
+        <tbody>
+          <% if (!disponiveis.length) { %>
+            <tr><td colspan="3" class="text-center text-muted">Nenhum voluntário disponível.</td></tr>
+          <% } %>
+          <% disponiveis.forEach(function (v) { %>
+            <tr>
+              <td><%= v.nome %></td>
+              <td><%= v.especialidade || '—' %></td>
+              <td class="text-end">
+                <form method="post" action="/campanhas/<%= campanha.id %>/voluntarios" class="d-inline">
+                  <input type="hidden" name="voluntario_id" value="<%= v.id %>">
+                  <button type="submit" class="btn btn-sm btn-outline-primary">Associar</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

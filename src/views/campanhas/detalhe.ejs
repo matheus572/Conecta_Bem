@@ -1,0 +1,86 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0"><%= campanha.titulo %></h1>
+  <div class="d-flex gap-2">
+    <a href="/campanhas" class="btn btn-outline-secondary">Voltar</a>
+    <a href="/campanhas/<%= campanha.id %>/editar" class="btn btn-outline-secondary">Editar</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4"><strong>Início:</strong> <%= campanha.data_inicio %></div>
+  <div class="col-12 col-md-4"><strong>Término:</strong> <%= campanha.data_fim %></div>
+  <div class="col-12 col-md-4"><strong>Status:</strong> <%= rotulosStatus[campanha.status] || campanha.status %></div>
+</div>
+<% if (campanha.descricao) { %>
+  <div class="mb-4"><strong>Descrição:</strong> <span class="text-muted"><%= campanha.descricao %></span></div>
+<% } %>
+
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="/campanhas/<%= campanha.id %>/voluntarios" class="btn btn-primary">Associar voluntários</a>
+  <a href="/campanhas/<%= campanha.id %>/resultados" class="btn btn-primary">Registrar resultados</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-6">
+    <h2 class="h5">Voluntários associados</h2>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr><th>Nome</th><th>Habilidades</th></tr>
+        </thead>
+        <tbody>
+          <% if (!voluntarios.length) { %>
+            <tr><td colspan="2" class="text-center text-muted">Nenhum voluntário associado.</td></tr>
+          <% } %>
+          <% voluntarios.forEach(function (v) { %>
+            <tr><td><%= v.nome %></td><td><%= v.especialidade || '—' %></td></tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <h2 class="h5">Beneficiários atendidos</h2>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr><th>Beneficiário</th><th>Data</th><th>Descrição</th></tr>
+        </thead>
+        <tbody>
+          <% if (!atendimentos.length) { %>
+            <tr><td colspan="3" class="text-center text-muted">Nenhum beneficiário atendido.</td></tr>
+          <% } %>
+          <% atendimentos.forEach(function (a) { %>
+            <tr>
+              <td><%= a.beneficiario_nome %></td>
+              <td><%= a.data_atendimento %></td>
+              <td><%= a.descricao || '—' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="h5">Doações distribuídas</h2>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr><th>Beneficiário</th><th>Tipo</th><th class="text-end">Quantidade</th></tr>
+        </thead>
+        <tbody>
+          <% if (!distribuicoes.length) { %>
+            <tr><td colspan="3" class="text-center text-muted">Nenhuma doação distribuída.</td></tr>
+          <% } %>
+          <% distribuicoes.forEach(function (di) { %>
+            <tr>
+              <td><%= di.beneficiario_nome %></td>
+              <td><%= rotulosTipos[di.tipo_doacao] || di.tipo_doacao %></td>
+              <td class="text-end"><%= di.quantidade %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
