@@ -1,0 +1,50 @@
+<%
+  const editando = voluntario !== null;
+  const v = editando ? voluntario : form;
+  const action = editando ? '/voluntarios/' + voluntario.id : '/voluntarios';
+  const method = editando ? 'PUT' : 'POST';
+%>
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <h1 class="h3 mb-3"><%= editando ? 'Editar voluntário' : 'Novo voluntário' %></h1>
+
+    <% if (typeof erro !== 'undefined' && erro) { %>
+      <div class="alert alert-danger"><%= erro %></div>
+    <% } %>
+
+    <form method="post" action="<%= action %>" novalidate>
+      <input type="hidden" name="_method" value="<%= method %>">
+
+      <div class="mb-3">
+        <label for="nome" class="form-label">Nome</label>
+        <input type="text" class="form-control" id="nome" name="nome" value="<%= v.nome || '' %>" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="cpf" class="form-label">CPF</label>
+        <input type="text" class="form-control" id="cpf" name="cpf" value="<%= v.cpf || '' %>" required>
+        <div class="form-text">CPF (11 dígitos), único por voluntário.</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="telefone" class="form-label">Telefone</label>
+        <input type="text" class="form-control" id="telefone" name="telefone" value="<%= v.telefone || '' %>">
+      </div>
+
+      <div class="mb-3">
+        <label for="especialidade" class="form-label">Habilidades</label>
+        <input type="text" class="form-control" id="especialidade" name="especialidade" value="<%= v.especialidade || '' %>" placeholder="Ex.: cozinha, recreação, administração">
+      </div>
+
+      <div class="mb-3">
+        <label for="disponibilidade" class="form-label">Disponibilidade de horários</label>
+        <input type="text" class="form-control" id="disponibilidade" name="disponibilidade" value="<%= v.disponibilidade || '' %>" placeholder="Ex.: segundas e quartas à tarde">
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a href="/voluntarios" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>

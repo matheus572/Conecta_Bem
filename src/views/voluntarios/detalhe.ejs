@@ -1,0 +1,43 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0"><%= voluntario.nome %></h1>
+  <div class="d-flex gap-2">
+    <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+      <a href="/voluntarios/<%= voluntario.id %>/editar" class="btn btn-outline-secondary">Editar</a>
+    <% } %>
+    <a href="/voluntarios" class="btn btn-outline-secondary">Voltar</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-6 col-lg-4"><strong>CPF:</strong> <%= voluntario.cpf %></div>
+  <div class="col-12 col-md-6 col-lg-4"><strong>Telefone:</strong> <%= voluntario.telefone || '—' %></div>
+  <div class="col-12 col-md-6 col-lg-4"><strong>Habilidades:</strong> <%= voluntario.especialidade || '—' %></div>
+  <div class="col-12 col-md-6 col-lg-4"><strong>Disponibilidade:</strong> <%= voluntario.disponibilidade || '—' %></div>
+</div>
+
+<h2 class="h5">Participação em campanhas</h2>
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Campanha</th>
+        <th>Início</th>
+        <th>Fim</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!campanhas.length) { %>
+        <tr><td colspan="4" class="text-center text-muted">Sem participação registrada em campanhas.</td></tr>
+      <% } %>
+      <% campanhas.forEach(function (c) { %>
+        <tr>
+          <td><%= c.titulo %></td>
+          <td><%= c.data_inicio %></td>
+          <td><%= c.data_fim %></td>
+          <td><%= c.status %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,56 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Voluntários</h1>
+  <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+    <a href="/voluntarios/novo" class="btn btn-primary">Novo voluntário</a>
+  <% } %>
+</div>
+
+<form method="get" action="/voluntarios" class="row g-2 mb-3">
+  <div class="col-12 col-md-8">
+    <input type="text" class="form-control" name="q" value="<%= q %>" placeholder="Buscar por nome, habilidade ou disponibilidade">
+  </div>
+  <div class="col-12 col-md-4">
+    <button type="submit" class="btn btn-outline-primary w-100">Filtrar</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>CPF</th>
+        <th>Habilidades</th>
+        <th>Disponibilidade</th>
+        <th>Telefone</th>
+        <th class="text-end">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!voluntarios.length) { %>
+        <tr><td colspan="6" class="text-center text-muted">Nenhum voluntário encontrado.</td></tr>
+      <% } %>
+      <% voluntarios.forEach(function (v) { %>
+        <tr>
+          <td><a href="/voluntarios/<%= v.id %>"><%= v.nome %></a></td>
+          <td><%= v.cpf %></td>
+          <td><%= v.especialidade || '—' %></td>
+          <td><%= v.disponibilidade || '—' %></td>
+          <td><%= v.telefone || '—' %></td>
+          <td class="text-end text-nowrap">
+            <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+              <a href="/voluntarios/<%= v.id %>/editar" class="btn btn-sm btn-outline-secondary">Editar</a>
+              <form method="post" action="/voluntarios/<%= v.id %>?_method=DELETE" class="d-inline"
+                onsubmit="return confirm('Excluir este voluntário?')">
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+              </form>
+            <% } else { %>
+              <a href="/voluntarios/<%= v.id %>" class="btn btn-sm btn-outline-secondary">Ver</a>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
