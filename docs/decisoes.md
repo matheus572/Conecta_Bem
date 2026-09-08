@@ -143,6 +143,68 @@ abaixo e detalham o desenho adotado.
 
 ---
 
+## Sprint 3 — Voluntários e Campanhas
+
+### 14. Colaborador sem NENHUM acesso ao módulo de campanhas (nem leitura)
+- **Decisão**: todas as rotas de `/campanhas` exigem `authorize('ADMINISTRADOR')`;
+  o Colaborador recebe 403 em qualquer rota (inclusive `GET`).
+- **Motivo**: o plano (§5) declara campanhas como "Admin-only (UC11)"; o ator do
+  UC11 é apenas o Administrador. A matriz §12.2 de "Funções do Produto" indica
+  "Somente consulta/participação" para o Colaborador, mas diverge do texto
+  descritivo (§13.3) e do plano — prevaleceu a leitura mais restritiva do plano.
+  Também reforçado pelo critério de aceite desta sprint ("não consegue acessar
+  nenhuma rota de gestão de campanhas").
+- **Ponto a confirmar**: se o stakeholder quiser liberar alguma visualização
+  básica de campanhas ao Colaborador, basta trocar o `router.use(authorize(...))`
+  por `authorize` apenas nas rotas de escrita.
+- **Onde**: `src/modules/campanhas/campanhas.routes.js`.
+
+### 15. Voluntários: Colaborador somente leitura (RF_36/§12.2)
+- **Decisão**: `GET` de voluntários liberado para ambos os perfis; escrita
+  (`POST`/`PUT`/`DELETE`) restrita ao Administrador (403 para Colaborador).
+- **Motivo**: matriz §12.2 ("Gerenciar Voluntários": X / Somente consulta) e
+  RF_36 ("Colaboradores consultam, sem gerenciar, voluntários"). Diferente de
+  doadores, o Colaborador **não** cadastra voluntários.
+- **Onde**: `src/modules/voluntarios/voluntarios.routes.js`.
+
+### 16. Nomenclatura e campos de voluntário/campanha
+- **Decisão**: `voluntario.especialidade` representa as "habilidades" (RF_18) e
+  `voluntario.disponibilidade` os "horários" (RF_18); `campanha.titulo` em vez
+  de `nome_campanha` (o RF_22 fala em "título"), com `descricao`, `data_inicio`,
+  `data_fim` e `status ENUM('PLANEJADA','ATIVA','ENCERRADA')`.
+- **Motivo**: seguir o texto dos RF/UC em vez do modelo conceitual (§10),
+  mantendo o vocabulário do requisito.
+- **Busca (RF_21)**: um único campo `q` pesquisa por nome, habilidade
+  (especialidade), disponibilidade e CPF — cobrindo "nome/habilidade/
+  disponibilidade" sem sobrecarregar a tela com três filtros.
+- **Onde**: `migrations/009_voluntario.sql`, `migrations/010_campanha.sql`,
+  `src/modules/voluntarios/*`.
+
+### 17. Resultados de campanha reaproveitam `atendimento` e `distribuicao`
+- **Decisão**: RF_24 (beneficiários atendidos + doações distribuídas) é atendido
+  adicionando FK opcional `campanha_id` nas tabelas existentes `atendimento`
+  (beneficiário atendido) e `distribuicao` (doação distribuída) — sem nova
+  entidade redundante.
+- **Motivo**: "reaproveite as entidades já existentes, apenas referencie/
+  associe" (instrução da sprint). A distribuição reusa o fluxo transacional de
+  `doacoes` (RN03, `registrarDistribuicao` ganhou um parâmetro `campanhaId`);
+  o atendimento usa a tabela `atendimento` (criada vazia na Sprint 1).
+- **Onde**: `migrations/012_campanha_resultados.sql`,
+  `src/modules/doacoes/doacoes.{service,repository}.js`,
+  `src/modules/campanhas/campanhas.{repository,service}.js`.
+
+### 18. Exclusão de campanha é física (sem soft delete)
+- **Decisão**: `DELETE` de campanha é físico, com `ON DELETE CASCADE` em
+  `campanha_voluntario` e `ON DELETE SET NULL` nas FKs de resultado
+  (`atendimento.campanha_id`, `distribuicao.campanha_id`).
+- **Motivo**: a exclusão lógica obrigatória (§11.2) vale para doadores e
+  voluntários; campanhas não são citadas, e preservar o vínculo de resultado via
+  `SET NULL` mantém o histórico sem "pendurar" o registro excluído.
+- **Onde**: `migrations/010_campanha.sql`, `migrations/011_campanha_voluntario.sql`,
+  `migrations/012_campanha_resultados.sql`.
+
+---
+
 ## Combinados na conversa, ainda não totalmente refletidos em código
 
 - **Reset de senha manual pelo admin no MVP (RF_03 adiado)**: combinação
