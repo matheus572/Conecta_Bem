@@ -18,6 +18,8 @@ import beneficiariosRoutes from './modules/beneficiarios/beneficiarios.routes.js
 import doadoresRoutes from './modules/doadores/doadores.routes.js';
 import doacoesRoutes from './modules/doacoes/doacoes.routes.js';
 import estoqueRoutes from './modules/estoque/estoque.routes.js';
+import voluntariosRoutes from './modules/voluntarios/voluntarios.routes.js';
+import campanhasRoutes from './modules/campanhas/campanhas.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -63,6 +65,8 @@ app.use('/beneficiarios', beneficiariosRoutes);
 app.use('/doadores', doadoresRoutes);
 app.use('/doacoes', doacoesRoutes);
 app.use('/estoque', estoqueRoutes);
+app.use('/voluntarios', voluntariosRoutes);
+app.use('/campanhas', campanhasRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
