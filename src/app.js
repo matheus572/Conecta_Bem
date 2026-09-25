@@ -20,6 +20,10 @@ import doacoesRoutes from './modules/doacoes/doacoes.routes.js';
 import estoqueRoutes from './modules/estoque/estoque.routes.js';
 import voluntariosRoutes from './modules/voluntarios/voluntarios.routes.js';
 import campanhasRoutes from './modules/campanhas/campanhas.routes.js';
+import cursosRoutes from './modules/cursos/cursos.routes.js';
+import matriculasRoutes from './modules/matriculas/matriculas.routes.js';
+import frequenciaRoutes from './modules/frequencia/frequencia.routes.js';
+import certificadosRoutes from './modules/certificados/certificados.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -67,6 +71,10 @@ app.use('/doacoes', doacoesRoutes);
 app.use('/estoque', estoqueRoutes);
 app.use('/voluntarios', voluntariosRoutes);
 app.use('/campanhas', campanhasRoutes);
+app.use('/cursos', cursosRoutes);
+app.use('/matriculas', matriculasRoutes);
+app.use('/frequencia', frequenciaRoutes);
+app.use('/certificados', certificadosRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
