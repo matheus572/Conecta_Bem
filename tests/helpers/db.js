@@ -7,6 +7,11 @@ import { sessionStore } from '../../src/config/session.js';
 import { runMigrations } from '../../migrations/migrate.js';
 
 const TABELAS_NEGOCIO = [
+  'certificado',
+  'frequencia',
+  'matricula',
+  'turma',
+  'curso',
   'distribuicao',
   'doacao',
   'estoque',
