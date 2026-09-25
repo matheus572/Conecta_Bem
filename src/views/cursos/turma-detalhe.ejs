@@ -1,0 +1,80 @@
+<% const isAdmin = currentUser.perfil === 'ADMINISTRADOR'; %>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Turma — <%= turma.curso_nome %></h1>
+  <div class="d-flex gap-2">
+    <% if (turma.status !== 'ENCERRADA') { %>
+      <a href="/matriculas/nova?turma_id=<%= turma.id %>" class="btn btn-primary">Realizar matrícula</a>
+    <% } %>
+    <% if (isAdmin) { %>
+      <% if (turma.status !== 'ENCERRADA') { %>
+        <a href="/frequencia/turmas/<%= turma.id %>" class="btn btn-outline-primary">Lançar frequência</a>
+      <% } %>
+      <a href="/certificados/turmas/<%= turma.id %>" class="btn btn-outline-success">Certificados</a>
+      <a href="/cursos/turmas/<%= turma.id %>/editar" class="btn btn-outline-secondary">Editar turma</a>
+    <% } %>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="row">
+      <div class="col-12 col-md-6">
+        <p class="mb-1"><strong>Curso:</strong> <a href="/cursos/<%= turma.curso_id %>"><%= turma.curso_nome %></a> (<%= turma.curso_carga_horaria %>h)</p>
+        <p class="mb-1"><strong>Período:</strong> <%= turma.periodo %></p>
+        <p class="mb-1"><strong>Horário:</strong> <%= turma.horario %> — <%= turma.dias_semana %></p>
+      </div>
+      <div class="col-12 col-md-6">
+        <p class="mb-1"><strong>Responsável:</strong> <%= turma.voluntario_nome || '—' %></p>
+        <p class="mb-1">
+          <strong>Vagas:</strong> <%= vagasOcupadas %>/<%= turma.capacidade %> ocupadas
+          <% if (vagasDisponiveis <= 0) { %>
+            <span class="badge bg-danger">Turma lotada</span>
+          <% } else { %>
+            <span class="badge bg-success"><%= vagasDisponiveis %> disponíve<%= vagasDisponiveis === 1 ? 'l' : 'is' %></span>
+          <% } %>
+        </p>
+        <p class="mb-0">
+          <strong>Status:</strong>
+          <span class="badge <%= turma.status === 'ATIVA' ? 'bg-success' : (turma.status === 'ENCERRADA' ? 'bg-dark' : 'bg-secondary') %>">
+            <%= rotulosStatusTurma[turma.status] %>
+          </span>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2 class="h4 mb-3">Alunos matriculados</h2>
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Beneficiário</th>
+        <th>CPF</th>
+        <th>Data da matrícula</th>
+        <th>Faltas</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!matriculas.length) { %>
+        <tr><td colspan="5" class="text-center text-muted">Nenhum aluno matriculado.</td></tr>
+      <% } %>
+      <% matriculas.forEach(function (m) { %>
+        <tr>
+          <td><%= m.beneficiario_nome %></td>
+          <td><%= m.beneficiario_cpf %></td>
+          <td><%= m.data_matricula instanceof Date ? m.data_matricula.toISOString().slice(0, 10).split('-').reverse().join('/') : m.data_matricula %></td>
+          <td><%= m.quantidade_faltas %><% if (m.status === 'CANCELADA') { %> <span class="text-muted small">(cancelamento por 3 faltas consecutivas — RN01)</span><% } %></td>
+          <td>
+            <span class="badge <%= m.status === 'ATIVA' ? 'bg-success' : (m.status === 'CONCLUIDA' ? 'bg-primary' : 'bg-danger') %>">
+              <%= m.status === 'ATIVA' ? 'Ativa' : (m.status === 'CONCLUIDA' ? 'Concluída' : 'Cancelada') %>
+            </span>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<a href="/cursos/<%= turma.curso_id %>" class="btn btn-outline-secondary mt-2">Voltar ao curso</a>

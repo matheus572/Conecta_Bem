@@ -8,6 +8,7 @@ import {
   ROTULOS_STATUS_TURMA,
 } from './cursos.service.js';
 import * as service from './cursos.service.js';
+import * as matriculasService from '../matriculas/matriculas.service.js';
 
 function notFound(res, message) {
   res.status(404).render('pages/error', { title: 'Erro 404', status: 404, message });
@@ -155,12 +156,15 @@ async function criarTurma(req, res) {
 async function detalharTurma(req, res) {
   const turma = await service.obterTurma(req.params.turmaId);
   if (!turma) return notFound(res, 'Turma não encontrada.');
+
+  const matriculas = await matriculasService.listarPorTurma(turma.id);
+  const vagasOcupadas = matriculas.filter((m) => m.status === 'ATIVA').length;
   res.render('cursos/turma-detalhe', {
     title: `Turma — ${turma.curso_nome}`,
     turma,
-    matriculas: [],
-    vagasOcupadas: 0,
-    vagasDisponiveis: turma.capacidade,
+    matriculas,
+    vagasOcupadas,
+    vagasDisponiveis: turma.capacidade - vagasOcupadas,
     rotulosStatusTurma: ROTULOS_STATUS_TURMA,
   });
 }
