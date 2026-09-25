@@ -1,0 +1,77 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Lançar frequência — <%= turma.curso_nome %></h1>
+  <a href="/cursos/turmas/<%= turma.id %>" class="btn btn-outline-secondary">Voltar à turma</a>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <p class="mb-0"><strong>Turma:</strong> <%= turma.periodo %> — <%= turma.horario %> (<%= turma.dias_semana %>)</p>
+  </div>
+</div>
+
+<% if (typeof erro !== 'undefined' && erro) { %>
+  <div class="alert alert-danger"><%= erro %></div>
+<% } %>
+
+<form method="get" action="/frequencia/turmas/<%= turma.id %>" class="row g-2 mb-3">
+  <div class="col-8 col-md-4">
+    <input type="date" class="form-control" name="data_aula" value="<%= dataAula %>" required>
+  </div>
+  <div class="col-4 col-md-2">
+    <button type="submit" class="btn btn-outline-primary w-100">Carregar</button>
+  </div>
+</form>
+
+<% if (dataAula) { %>
+  <form method="post" action="/frequencia/turmas/<%= turma.id %>">
+    <input type="hidden" name="data_aula" value="<%= dataAula %>">
+
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Aluno</th>
+            <th class="text-center">Presente</th>
+            <th>Situação nesta data</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!alunos.length) { %>
+            <tr><td colspan="3" class="text-center text-muted">Nenhum aluno com matrícula ativa nesta turma.</td></tr>
+          <% } %>
+          <% alunos.forEach(function (a) { %>
+            <% const lancamento = lancamentos.find(function (l) { return Number(l.matricula_id) === Number(a.id); }); %>
+            <tr>
+              <td><%= a.beneficiario_nome %></td>
+              <td class="text-center">
+                <% if (lancamento) { %>
+                  —
+                <% } else { %>
+                  <input type="checkbox" class="form-check-input" name="presentes" value="<%= a.id %>">
+                <% } %>
+              </td>
+              <td>
+                <% if (lancamento) { %>
+                  <span class="badge <%= lancamento.presenca ? 'bg-success' : 'bg-danger' %>">
+                    <%= lancamento.presenca ? 'Presente' : 'Falta' %>
+                  </span>
+                  <span class="text-muted small">(já lançado)</span>
+                <% } else { %>
+                  <span class="text-muted">Pendente — desmarcado conta como falta</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (alunos.length) { %>
+      <div class="alert alert-warning small">
+        Alunos desmarcados recebem <strong>falta</strong>. Ao atingir 3 faltas
+        <strong>consecutivas</strong>, a matrícula é cancelada automaticamente (RN01) e a vaga é liberada.
+      </div>
+      <button type="submit" class="btn btn-primary">Salvar frequência</button>
+    <% } %>
+  </form>
+<% } %>
