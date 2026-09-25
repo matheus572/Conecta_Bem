@@ -205,7 +205,74 @@ abaixo e detalham o desenho adotado.
 
 ---
 
-## Combinados na conversa, ainda não totalmente refletidos em código
+## Sprint 4 — Cursos, Oficinas e Certificação
+
+Os três pontos em aberto desta sprint (plano §8 itens 4 e 5; plano §9.3) foram
+**confirmados com o time** antes de codar, via pergunta direta:
+
+### 19. Frequência mínima para certificado: 75%
+- **Decisão**: frequência mínima de **75%** (presenças ÷ aulas lançadas do
+  aluno) para o aluno ser considerado concluinte/apto ao certificado
+  (UC13/RF_35). A documentação não definia número (ponto em aberto §13/§8.4 do
+  plano).
+- **Detalhamento**: mínimo de 1 aula lançada (0 aulas ⇒ 0% ⇒ não apto).
+  Constante `FREQUENCIA_MINIMA_CERTIFICADO = 0.75` no service.
+- **Onde**: `src/modules/certificados/certificados.service.js`,
+  `tests/unit/certificados.service.test.js`.
+
+### 20. Certificado sem página pública de validação nesta sprint
+- **Decisão**: o `codigo_validacao` (único, RF_35) é exibido apenas na tela do
+  Administrador (lista de certificados da turma). A página pública de consulta
+  (sem login) fica para sprint futura (provável Sprint 5).
+- **Motivo**: escopo mínimo confirmado; o código já existe no banco e é único,
+  então a página pública é aditiva e não exige retrabalho.
+
+### 21. Notificação de RN01 (RF_34) = alerta em tela para o administrador
+- **Decisão**: ao cancelar a matrícula por 3 faltas consecutivas, o sistema
+  exibe **alerta em tela (flash) para o administrador** que lançou a
+  frequência, informando o cancelamento e a liberação da vaga. Também há
+  indicação visual na lista de alunos da turma ("cancelamento por 3 faltas
+  consecutivas — RN01").
+- **Motivo**: SMTP está fora do escopo desta versão (§6 da documentação e
+  decisão nº 7) — o desfecho é análogo ao alerta de estoque mínimo (nº 10) e
+  ao stub de RF_03. Quando houver SMTP, o ponto de gancho é o controller de
+  frequência (o service já devolve a lista de matrículas canceladas).
+- **Onde**: `src/modules/frequencia/frequencia.{service,controller}.js`.
+
+### 22. RN01 conta faltas CONSECUTIVAS por `data_aula`
+- **Decisão**: após cada falta, o service busca os 3 últimos lançamentos da
+  matrícula (ordenados por `data_aula` DESC) e cancela somente se os 3 forem
+  faltas. Uma presença quebra a sequência (falta-presença-falta não cancela).
+  `matricula.quantidade_faltas` é mantido como total de faltas (recalculado a
+  cada falta) apenas para exibição — **não** é a base da RN01.
+- **Onde**: `frequencia.service.js` (`atingiuFaltasConsecutivas`, função pura),
+  `frequencia.repository.js` (`ultimasFrequencias`).
+
+### 23. Coluna gerada para garantir 1 matrícula ATIVA por beneficiário/turma
+- **Decisão**: `UNIQUE(turma_id, beneficiario_id)` "para ativa" (plano §2.1
+  #13) foi implementada com a coluna gerada `beneficiario_ativo_id`
+  (`IF(status='ATIVA', beneficiario_id, NULL)`, STORED) + `UNIQUE(turma_id,
+  beneficiario_ativo_id)`, pois o MySQL não tem índice parcial.
+- **Motivo**: UNIQUE ignora duplicatas de NULL, então matrículas CANCELADA/
+  CONCLUIDA não bloqueiam rematrícula — requisito do fluxo UC09→UC10 (a vaga é
+  liberada para nova matrícula após o cancelamento automático).
+- **Onde**: `migrations/016_matricula.sql`.
+
+### 24. Curso/turma com exclusão física bloqueada por dependência
+- **Decisão**: `DELETE` de curso falha com mensagem clara se houver turmas;
+  `DELETE` de turma falha se houver matrículas. Sem soft delete (documentação
+  só exige exclusão lógica para doadores/voluntários — §11.2; mesmo padrão de
+  campanhas, decisão nº 18).
+- **Onde**: `src/modules/cursos/cursos.service.js`.
+
+### 25. Critério de elegibilidade do certificado (UC13)
+- **Decisão**: apto = turma **ENCERRADA** **e** matrícula ATIVA/CONCLUIDA (nunca
+  CANCELADA) **e** frequência ≥ 75% **e** sem certificado emitido. Ao emitir,
+  matrícula ATIVA passa a CONCLUIDA na mesma transação.
+- **Motivo**: combina a pré-condição do UC13 ("matrícula concluída/frequência
+  mínima") com o fluxo da tela ("seleciona turma/curso concluído") sem exigir
+  um passo manual extra de "concluir matrículas" — fora do escopo da sprint.
+- **Onde**: `certificados.service.js` (`listarElegibilidade`, `emitir`).
 
 - **Reset de senha manual pelo admin no MVP (RF_03 adiado)**: combinação
   implícita na conversa; ainda **não** há um fluxo de reset no módulo de
