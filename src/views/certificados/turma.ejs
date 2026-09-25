@@ -1,0 +1,70 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Certificados — <%= turma.curso_nome %></h1>
+  <a href="/certificados" class="btn btn-outline-secondary">Voltar</a>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <p class="mb-1"><strong>Turma:</strong> <%= turma.periodo %> — <%= turma.horario %> (<%= turma.dias_semana %>)</p>
+    <p class="mb-1"><strong>Carga horária:</strong> <%= turma.curso_carga_horaria %>h</p>
+    <p class="mb-0">
+      <strong>Status:</strong>
+      <span class="badge <%= turma.status === 'ENCERRADA' ? 'bg-dark' : 'bg-success' %>"><%= rotulosStatusTurma[turma.status] %></span>
+      <% if (turma.status !== 'ENCERRADA') { %>
+        <span class="text-muted small">— a emissão de certificados só é liberada com a turma encerrada.</span>
+      <% } %>
+    </p>
+  </div>
+</div>
+
+<h2 class="h4 mb-3">Alunos (elegibilidade — frequência mínima de <%= frequenciaMinima %>%)</h2>
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Aluno</th>
+        <th>Matrícula</th>
+        <th>Presenças</th>
+        <th>Frequência</th>
+        <th>Situação</th>
+        <th class="text-end">Ação</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!alunos.length) { %>
+        <tr><td colspan="6" class="text-center text-muted">Nenhum aluno matriculado nesta turma.</td></tr>
+      <% } %>
+      <% alunos.forEach(function (a) { %>
+        <tr>
+          <td><%= a.beneficiario_nome %></td>
+          <td><span class="badge <%= a.status === 'ATIVA' ? 'bg-success' : (a.status === 'CONCLUIDA' ? 'bg-primary' : 'bg-danger') %>"><%= rotulosStatusMatricula[a.status] %></span></td>
+          <td><%= a.totalPresencas %>/<%= a.totalAulas %></td>
+          <td><%= a.percentual %>%</td>
+          <td>
+            <% if (a.certificado) { %>
+              <span class="badge bg-primary">Certificado emitido</span>
+            <% } else if (a.apto) { %>
+              <span class="badge bg-success">Apto</span>
+            <% } else { %>
+              <span class="badge bg-secondary">Não apto</span>
+            <% } %>
+          </td>
+          <td class="text-end">
+            <% if (a.apto) { %>
+              <form method="post" action="/certificados" class="d-inline"
+                onsubmit="return confirm('Emitir certificado para <%= a.beneficiario_nome %>?')">
+                <input type="hidden" name="matricula_id" value="<%= a.id %>">
+                <input type="hidden" name="turma_id" value="<%= turma.id %>">
+                <button type="submit" class="btn btn-sm btn-primary">Emitir certificado</button>
+              </form>
+            <% } else if (a.certificado) { %>
+              <code><%= a.certificado.codigo_validacao %></code>
+            <% } else { %>
+              —
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
