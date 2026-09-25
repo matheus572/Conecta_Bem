@@ -1,0 +1,70 @@
+<%
+  const editando = turma !== null;
+  const t = editando ? turma : form;
+  const action = editando ? '/cursos/turmas/' + turma.id : '/cursos/' + curso.id + '/turmas';
+  const method = editando ? 'PUT' : 'POST';
+%>
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <h1 class="h3 mb-3"><%= editando ? 'Editar turma' : 'Nova turma' %> — <%= curso.nome %></h1>
+
+    <% if (typeof erro !== 'undefined' && erro) { %>
+      <div class="alert alert-danger"><%= erro %></div>
+    <% } %>
+
+    <form method="post" action="<%= action %>" novalidate>
+      <input type="hidden" name="_method" value="<%= method %>">
+
+      <div class="mb-3">
+        <label for="periodo" class="form-label">Período</label>
+        <input type="text" class="form-control" id="periodo" name="periodo" value="<%= t.periodo || '' %>"
+          placeholder="Ex.: 10/03 a 25/04/2026" required>
+      </div>
+
+      <div class="row">
+        <div class="mb-3 col-6">
+          <label for="horario" class="form-label">Horário</label>
+          <input type="text" class="form-control" id="horario" name="horario" value="<%= t.horario || '' %>"
+            placeholder="Ex.: 14h às 16h" required>
+        </div>
+        <div class="mb-3 col-6">
+          <label for="dias_semana" class="form-label">Dias da semana</label>
+          <input type="text" class="form-control" id="dias_semana" name="dias_semana" value="<%= t.dias_semana || '' %>"
+            placeholder="Ex.: segundas e quartas" required>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="mb-3 col-6">
+          <label for="capacidade" class="form-label">Capacidade (vagas)</label>
+          <input type="number" class="form-control" id="capacidade" name="capacidade" min="1"
+            value="<%= t.capacidade || '' %>" required>
+          <div class="form-text">Limite usado no controle de vagas da matrícula (RN02).</div>
+        </div>
+        <div class="mb-3 col-6">
+          <label for="status" class="form-label">Status</label>
+          <select class="form-select" id="status" name="status">
+            <% statusTurma.forEach(function (s) { %>
+              <option value="<%= s %>" <%= (t.status || 'PLANEJADA') === s ? 'selected' : '' %>><%= rotulosStatus[s] %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="voluntario_id" class="form-label">Voluntário responsável (opcional)</label>
+        <select class="form-select" id="voluntario_id" name="voluntario_id">
+          <option value="">— Nenhum —</option>
+          <% voluntarios.forEach(function (v) { %>
+            <option value="<%= v.id %>" <%= Number(t.voluntario_id) === v.id ? 'selected' : '' %>><%= v.nome %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a href="/cursos/<%= curso.id %>" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,68 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Cursos e Oficinas</h1>
+  <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+    <a href="/cursos/novo" class="btn btn-primary">Novo curso</a>
+  <% } %>
+</div>
+
+<form method="get" action="/cursos" class="row g-2 mb-3">
+  <div class="col-12 col-md-6">
+    <input type="text" class="form-control" name="q" value="<%= q %>" placeholder="Buscar por nome">
+  </div>
+  <div class="col-8 col-md-4">
+    <select class="form-select" name="status">
+      <option value="">Todos os status</option>
+      <% statusCurso.forEach(function (s) { %>
+        <option value="<%= s %>" <%= status === s ? 'selected' : '' %>><%= rotulosStatus[s] %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="col-4 col-md-2">
+    <button type="submit" class="btn btn-outline-primary w-100">Filtrar</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Carga horária</th>
+        <th>Vagas</th>
+        <th>Turmas</th>
+        <th>Status</th>
+        <th class="text-end">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!cursos.length) { %>
+        <tr><td colspan="6" class="text-center text-muted">Nenhum curso encontrado.</td></tr>
+      <% } %>
+      <% cursos.forEach(function (c) { %>
+        <tr>
+          <td><a href="/cursos/<%= c.id %>"><%= c.nome %></a></td>
+          <td><%= c.carga_horaria %>h</td>
+          <td><%= c.quantidade_vagas %></td>
+          <td><%= c.total_turmas %></td>
+          <td>
+            <span class="badge <%= c.status === 'ATIVO' ? 'bg-success' : 'bg-secondary' %>">
+              <%= rotulosStatus[c.status] %>
+            </span>
+          </td>
+          <td class="text-end text-nowrap">
+            <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+              <a href="/cursos/<%= c.id %>/editar" class="btn btn-sm btn-outline-secondary">Editar</a>
+              <form method="post" action="/cursos/<%= c.id %>?_method=DELETE" class="d-inline"
+                onsubmit="return confirm('Excluir este curso?')">
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+              </form>
+            <% } else { %>
+              <a href="/cursos/<%= c.id %>" class="btn btn-sm btn-outline-secondary">Ver</a>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

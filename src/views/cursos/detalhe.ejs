@@ -1,0 +1,73 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0"><%= curso.nome %></h1>
+  <div class="d-flex gap-2">
+    <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+      <a href="/cursos/<%= curso.id %>/editar" class="btn btn-outline-secondary">Editar curso</a>
+      <a href="/cursos/<%= curso.id %>/turmas/nova" class="btn btn-primary">Nova turma</a>
+    <% } %>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <p class="mb-1"><strong>Descrição:</strong> <%= curso.descricao || '—' %></p>
+    <p class="mb-1"><strong>Carga horária:</strong> <%= curso.carga_horaria %>h</p>
+    <p class="mb-1"><strong>Vagas (curso):</strong> <%= curso.quantidade_vagas %></p>
+    <p class="mb-0">
+      <strong>Status:</strong>
+      <span class="badge <%= curso.status === 'ATIVO' ? 'bg-success' : 'bg-secondary' %>">
+        <%= rotulosStatusCurso[curso.status] %>
+      </span>
+    </p>
+  </div>
+</div>
+
+<h2 class="h4 mb-3">Turmas</h2>
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Período</th>
+        <th>Horário</th>
+        <th>Dias</th>
+        <th>Responsável</th>
+        <th>Ocupação</th>
+        <th>Status</th>
+        <th class="text-end">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!turmas.length) { %>
+        <tr><td colspan="7" class="text-center text-muted">Nenhuma turma cadastrada.</td></tr>
+      <% } %>
+      <% turmas.forEach(function (t) { %>
+        <tr>
+          <td><a href="/cursos/turmas/<%= t.id %>"><%= t.periodo %></a></td>
+          <td><%= t.horario %></td>
+          <td><%= t.dias_semana %></td>
+          <td><%= t.voluntario_nome || '—' %></td>
+          <td><%= t.vagas_ocupadas %>/<%= t.capacidade %></td>
+          <td>
+            <span class="badge <%= t.status === 'ATIVA' ? 'bg-success' : (t.status === 'ENCERRADA' ? 'bg-dark' : 'bg-secondary') %>">
+              <%= rotulosStatusTurma[t.status] %>
+            </span>
+          </td>
+          <td class="text-end text-nowrap">
+            <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+              <a href="/cursos/turmas/<%= t.id %>/editar" class="btn btn-sm btn-outline-secondary">Editar</a>
+              <form method="post" action="/cursos/turmas/<%= t.id %>?_method=DELETE" class="d-inline"
+                onsubmit="return confirm('Excluir esta turma?')">
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+              </form>
+            <% } else { %>
+              <a href="/cursos/turmas/<%= t.id %>" class="btn btn-sm btn-outline-secondary">Ver</a>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<a href="/cursos" class="btn btn-outline-secondary mt-2">Voltar</a>
