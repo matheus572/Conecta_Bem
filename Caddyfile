@@ -1,0 +1,19 @@
+# Caddyfile — HTTPS automático (RNF_03).
+#
+# Em produção: DOMAIN=app.suaorg.org.br (DNS apontado para o servidor) e
+# ACME_EMAIL valido — o Caddy emite e renova o certificado via Let's Encrypt.
+#
+# Em teste local: DOMAIN=localhost — o Caddy usa seu certificado interno
+# (autoassinado); o navegador pedirá exceção de segurança. Eis o critério de
+# aceite "certificado válido ou autoassinado em ambiente de teste".
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	reverse_proxy app:3000
+
+	# Encerre a sessão HTTP de forma limpa em uploads grandes (anexos de
+	# planilhas não passam pela aplicação; buffer padrão é suficiente).
+	encode gzip
+}

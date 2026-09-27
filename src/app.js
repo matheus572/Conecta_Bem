@@ -31,6 +31,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
+// Em produção a aplicação fica atrás do Caddy (reverse proxy com HTTPS) —
+// `trust proxy` é necessário para que o Express reconheça a conexão como
+// segura (cookie de sessão com flag Secure — RNF_03/§11.2).
+if (env.app.env === 'production') {
+  app.set('trust proxy', 1);
+}
+
 app.set('view engine', 'ejs');
 app.set('views', path.resolve(__dirname, 'views'));
 

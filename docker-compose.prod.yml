@@ -1,0 +1,80 @@
+# docker-compose.prod.yml — ambiente de produção: app + db + Caddy (HTTPS
+# automático com Let's Encrypt — RNF_03, seção 1.2 do plano).
+#
+# Pré-requisitos: ver docs/deploy.md (variáveis de ambiente obrigatórias em um
+# .env ao lado deste arquivo — não há defaults inseguros aqui, propositalmente).
+#
+# Uso:
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   # teste local (certificado interno/autoassinado da Caddy):
+#   DOMAIN=localhost docker compose -f docker-compose.prod.yml up -d --build
+services:
+  db:
+    image: mysql:8
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}
+      MYSQL_DATABASE: ${DB_NAME:-conectabem}
+      MYSQL_USER: ${DB_USER:-conectabem}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+    volumes:
+      - db_data_prod:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Sem porta publicada no host: o banco só é acessível pela rede interna.
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    # Migrations e seed são idempotentes — seguro rodar a cada start.
+    command: sh -c "node migrations/migrate.js && node migrations/seed.js && node src/server.js"
+    environment:
+      APP_PORT: 3000
+      APP_ENV: production
+      APP_BASE_URL: "${APP_BASE_URL:?defina APP_BASE_URL no .env}"
+      SESSION_SECRET: "${SESSION_SECRET:?defina SESSION_SECRET no .env}"
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-conectabem}
+      DB_USER: ${DB_USER:-conectabem}
+      DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@conectabem.net}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrador}
+      # Se definida, cria (uma única vez) o usuário administrador inicial.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # Recuperação de senha em produção exige um provedor SMTP real
+      # (RF_03 funciona tecnicamente via SMTP configurado — ver docs/decisoes.md).
+      SMTP_HOST: ${SMTP_HOST:?defina SMTP_HOST no .env}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      MAIL_FROM: ${MAIL_FROM:-ConectaBem <no-reply@conectabem.net>}
+    depends_on:
+      db:
+        condition: service_healthy
+    # Sem porta pública: quem publica a aplicação é o Caddy (HTTPS).
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      DOMAIN: "${DOMAIN:?defina DOMAIN no .env}"
+      ACME_EMAIL: "${ACME_EMAIL:?defina ACME_EMAIL no .env}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  db_data_prod:
+  caddy_data:
+  caddy_config:

@@ -1,6 +1,7 @@
-# Imagem de desenvolvimento. Para produção, será adicionada uma variante
-# multi-stage em docker-compose.prod.yml (Sprint 5), sem dependências de dev.
-FROM node:20-alpine
+# Imagem base (desenvolvimento) — o docker-compose.yml sobrescreve o CMD com
+# npm install + migrate + seed + nodemon. Para produção, ver o stage abaixo,
+# usado pelo docker-compose.prod.yml (Sprint 5).
+FROM node:20-alpine AS development
 
 WORKDIR /app
 
@@ -12,4 +13,22 @@ COPY . .
 
 EXPOSE 3000
 
-CMD ["node", "src/app.js"]
+CMD ["node", "src/server.js"]
+
+# ---- Produção ----
+# Sem devDependencies (imagem menor) e sem nodemon. Migrations e seed (ambos
+# idempotentes) rodam no start via docker-compose.prod.yml.
+FROM node:20-alpine AS production
+
+ENV NODE_ENV=production
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["node", "src/server.js"]
