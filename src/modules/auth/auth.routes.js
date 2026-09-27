@@ -7,7 +7,11 @@ const router = express.Router();
 router.get('/login', controller.renderLoginForm);
 router.post('/login', controller.login);
 router.post('/logout', controller.logout);
-// RF_03 (recuperação de senha por e-mail) está fora do MVP — stub "em breve".
+
+// Recuperação de senha (RF_03): solicitação de link + redefinição por token.
 router.get('/forgot-password', controller.forgotPassword);
+router.post('/forgot-password', controller.solicitarRecuperacao);
+router.get('/reset-password', controller.renderResetPassword);
+router.post('/reset-password', controller.resetPassword);
 
 export default router;

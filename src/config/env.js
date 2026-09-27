@@ -24,6 +24,13 @@ const env = {
     password: process.env.DB_PASSWORD || 'conectabem_dev',
     database: process.env.DB_NAME || 'conectabem',
   },
+  mail: {
+    host: process.env.SMTP_HOST || 'mailhog',
+    port: parseInt(process.env.SMTP_PORT || '1025', 10),
+    from: process.env.MAIL_FROM || 'ConectaBem <no-reply@conectabem.net>',
+    // URL pública usada nos links de e-mail (recuperação de senha).
+    baseUrl: process.env.APP_BASE_URL || 'http://localhost:3000',
+  },
 };
 
 export { env };
