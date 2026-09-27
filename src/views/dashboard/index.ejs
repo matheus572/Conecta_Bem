@@ -1,0 +1,91 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Painel de controle</h1>
+  <span class="text-muted small">Bem-vindo(a), <%= currentUser.nome %>.</span>
+</div>
+
+<% if (vazio) { %>
+  <div class="alert alert-info" role="alert">
+    Ainda não há dados cadastrados. Os indicadores aparecem zerados — comece pelo
+    cadastro de beneficiários e doações para vê-los atualizar.
+  </div>
+<% } %>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-bg-primary h-100">
+      <div class="card-body">
+        <div class="small text-uppercase">Beneficiários ativos</div>
+        <div class="display-6 fw-bold"><%= beneficiariosAtivos %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-bg-success h-100">
+      <div class="card-body">
+        <div class="small text-uppercase">Doações no mês</div>
+        <div class="display-6 fw-bold"><%= doacoesMes %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-bg-info h-100">
+      <div class="card-body">
+        <div class="small text-uppercase">Voluntários ativos</div>
+        <div class="display-6 fw-bold"><%= voluntariosAtivos %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="/estoque" class="text-decoration-none">
+      <div class="card h-100 <%= estoqueAbaixoMinimo.length ? 'text-bg-danger' : 'text-bg-secondary' %>">
+        <div class="card-body">
+          <div class="small text-uppercase">Estoque abaixo do mínimo</div>
+          <div class="display-6 fw-bold"><%= estoqueAbaixoMinimo.length %></div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<% if (estoqueAbaixoMinimo.length) { %>
+  <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
+    <strong>Atenção:</strong>
+    <span>
+      estoque abaixo do mínimo em:
+      <% estoqueAbaixoMinimo.forEach(function (e, i) { %>
+        <span class="badge text-bg-danger"><%= e.rotulo %></span><% if (i < estoqueAbaixoMinimo.length - 1) { %> <% } %>
+      <% }) %>
+      <a href="/estoque" class="alert-link">ver estoque</a>.
+    </span>
+  </div>
+<% } %>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h2 class="h5 card-title">Próximas campanhas</h2>
+    <% if (!proximasCampanhas.length) { %>
+      <p class="text-muted mb-0">Nenhuma campanha planejada ou em andamento.</p>
+    <% } else { %>
+      <div class="table-responsive">
+        <table class="table table-striped align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Campanha</th>
+              <th>Status</th>
+              <th>Período</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% proximasCampanhas.forEach(function (c) { %>
+              <tr>
+                <td><%= c.titulo %></td>
+                <td><span class="badge <%= c.status === 'ATIVA' ? 'text-bg-success' : 'text-bg-secondary' %>"><%= c.status %></span></td>
+                <td><%= c.periodo %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>

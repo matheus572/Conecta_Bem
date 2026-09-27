@@ -25,6 +25,7 @@ import matriculasRoutes from './modules/matriculas/matriculas.routes.js';
 import frequenciaRoutes from './modules/frequencia/frequencia.routes.js';
 import certificadosRoutes from './modules/certificados/certificados.routes.js';
 import relatoriosRoutes from './modules/relatorios/relatorios.routes.js';
+import * as dashboardController from './modules/dashboard/dashboard.controller.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -61,9 +62,8 @@ app.use(authRoutes);
 // Tudo abaixo exige autenticação (RN05).
 app.use(requireAuth);
 
-app.get('/', (req, res) => {
-  res.render('pages/home', { title: 'Início' });
-});
+// RF_29/UC14: a tela inicial é o painel de controle.
+app.get('/', dashboardController.exibir);
 
 app.use('/usuarios', usuariosRoutes);
 app.use('/beneficiarios', beneficiariosRoutes);
