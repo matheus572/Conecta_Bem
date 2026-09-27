@@ -2,6 +2,14 @@
   <h1 class="h3 mb-0">Estoque</h1>
 </div>
 
+<% const baixos = itens.filter(function (i) { return i.abaixo_minimo; }); %>
+<% if (baixos.length) { %>
+  <div class="alert alert-warning" role="alert">
+    <strong>Atenção (RF_16):</strong> <%= baixos.length %> tipo(s) abaixo do estoque mínimo.
+    Considere priorizar doações desses tipos.
+  </div>
+<% } %>
+
 <form method="get" action="/estoque" class="row g-2 mb-3">
   <div class="col-6 col-md-3">
     <select class="form-select" name="tipo">
@@ -38,7 +46,7 @@
         <tr><td colspan="4" class="text-center text-muted">Nenhum item encontrado.</td></tr>
       <% } %>
       <% itens.forEach(function (item) { %>
-        <tr>
+        <tr class="<%= item.abaixo_minimo ? 'table-danger' : '' %>">
           <td><%= rotulos[item.tipo_doacao] || item.tipo_doacao %></td>
           <td class="text-end"><%= item.quantidade %></td>
           <td class="text-end">
