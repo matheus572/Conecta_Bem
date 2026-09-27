@@ -7,6 +7,7 @@ import { sessionStore } from '../../src/config/session.js';
 import { runMigrations } from '../../migrations/migrate.js';
 
 const TABELAS_NEGOCIO = [
+  'audit_log',
   'password_reset',
   'certificado',
   'frequencia',
