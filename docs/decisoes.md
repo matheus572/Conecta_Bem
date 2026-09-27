@@ -283,3 +283,86 @@ Os três pontos em aberto desta sprint (plano §8 itens 4 e 5; plano §9.3) fora
   edita/exclui — 403). Já refletida no código e coberta por teste de
   integração; permanece listada como pergunta em aberto no plano (§9.7) para
   validação final com o stakeholder.
+
+---
+
+## Sprint 5 — Saídas e Fechamento
+
+### 26. Mailhog conta como "SMTP disponível" para RF_03 em dev
+- **Decisão**: RF_03 (recuperação de senha) foi implementada de fato — fluxo
+  completo de "esqueci minha senha" com token de expiração curta (**30 min**),
+  envio por e-mail via **Mailhog** em dev. Em produção, RF_03 fica **pendente
+  da configuração de um provedor SMTP real** (variáveis `SMTP_*` em
+  `docs/deploy.md`).
+- **Motivo**: confirmado com o time nesta sprint; o Mailhog estava disponível
+  no docker-compose desde a Sprint 0 ("prepara RF_03", plano §1.2). Substitui a
+  decisão nº 7 (stub "em breve").
+- **Detalhamento**: o token é `randomBytes(32)` hex e é persistido apenas como
+  hash SHA-256 (`password_reset.token_hash`); só o link mais recente é válido
+  (tokens anteriores do usuário são invalidados); a resposta da solicitação é
+  **neutra** (idêntica para e-mail inexistente — não vaza existência de conta,
+  LGPD §11.3). Em `APP_ENV=test` os e-mails não são enviados: ficam em uma
+  outbox em memória (`src/utils/mailer.js`) para os testes de integração.
+- **Onde**: `migrations/019_password_reset.sql`, `src/config/env.js` (bloco
+  `mail`), `src/utils/mailer.js`, `src/modules/auth/*`,
+  `src/views/auth/{forgot-password,reset-password}.ejs`,
+  `tests/{unit/auth.reset,integration/auth}.test.js`.
+
+### 27. LGPD: apenas auditoria + autorização por perfil; retenção pendente
+- **Decisão**: nesta sprint foram implementados apenas (a) o **middleware de
+  auditoria** (§11.3) e (b) a **revisão da autorização por perfil**. Nenhuma
+  rotina de expurgo/anonimização foi criada — a **política de retenção de
+  dados pessoais (RNF_04) ficou pendente de definição pelo stakeholder** (o
+  briefing proibia implementar política própria).
+- **Detalhamento da auditoria de autorização (revisão, sem código novo)**:
+  `requireAuth` global (RN05) protege todas as rotas autenticadas;
+  `authorize('ADMINISTRADOR')` cobre usuários, campanhas (decisão nº 14),
+  frequência, certificados, cursos/turmas (escrita) e relatórios RF_S01/S03;
+  a regra intermediária de doadores (§5 do plano) e a consulta liberada de
+  cursos/voluntários (RF_36) foram confirmadas. Nenhum endpoint de dados
+  sensíveis (situação socioeconômica, CPF/CNPJ) acessível fora do perfil.
+- **Detalhamento do log**: `audit_log` grava apenas **metadados** (usuário,
+  ação, entidade, id, rota/timestamp) — nunca o payload sensível (CPF,
+  situação social), por minimização; falhas de gravação não derrubam a
+  requisição (log no stderr); acessos negados (403) não são registrados como
+  edição (o middleware vem depois do `authorize`).
+- **Onde**: `migrations/020_audit_log.sql`, `src/middlewares/audit.js`,
+  rotas de `beneficiarios`/`doadores`, `tests/integration/auditoria.test.js`.
+
+### 28. Backup RNF_06: script + cron; responsável operacional pendente
+- **Decisão**: `scripts/backup.sh` (mysqldump diário comprimido, retenção de
+  7 dias) + instruções de cron em `docs/deploy.md`. O **responsável técnico
+  por acompanhar os backups em produção ficou pendente** de definição pelo
+  stakeholder (decisão operacional, não de código) — registro também em
+  `docs/deploy.md` (seção 4).
+- **Onde**: `scripts/backup.sh`, `docs/deploy.md`.
+
+### 29. Validação pública de certificado fica FORA do escopo
+- **Decisão**: confirmada com o time — a página pública de consulta por
+  `codigo_validacao` (antevista na decisão nº 20) **não** entra na Sprint 5;
+  o código continua visível apenas ao Administrador.
+- **Motivo**: o escopo da Sprint 5 é consolidação e saída de dados; nenhuma
+  entidade/funcionalidade nova fora do briefing.
+
+### 30. RF_S02 "básico" para Colaborador = mesmo relatório, único acessível
+- **Decisão**: o relatório de atendimentos (RF_27) é **idêntico** para ambos
+  os perfis (listagem e exportação), sem mascaramento de colunas — o relatório
+  não expõe dado que o Colaborador já não tenha acesso via UC03/UC05.
+  "Versão básica" foi interpretada como "o único relatório acessível ao perfil".
+  Restrição permanece para doações (RF_S01) e campanhas (RF_S03): 403.
+- **Motivo**: confirmado com o time nesta sprint.
+- **Onde**: `src/modules/relatorios/*`, `tests/integration/relatorios.test.js`.
+
+### 31. Dashboard calcula tudo das tabelas existentes (sem tabelas novas)
+- **Decisão**: os 4 indicadores (RF_29) e o alerta de estoque mínimo (RF_16)
+  são agregações ao vivo — nenhuma "tabela-resumo" foi criada, conforme o
+  briefing. Com a base vazia, a view exibe indicadores zerados com mensagem
+  orientativa (fluxo alternativo do UC14), nunca erro.
+- **Onde**: `src/modules/dashboard/*`, `src/views/dashboard/index.ejs`.
+
+### 32. `trust proxy` em produção (sessão Secure atrás do Caddy)
+- **Decisão**: `app.set('trust proxy', 1)` quando `APP_ENV=production`.
+- **Motivo**: sem isso, o Express (atrás do Caddy) tratando a conexão como
+  HTTP simples não enviava o cookie de sessão com `Secure`, quebrando o
+  login em produção. Detectado no teste de fumaça do compose de produção.
+- **Onde**: `src/app.js`.
