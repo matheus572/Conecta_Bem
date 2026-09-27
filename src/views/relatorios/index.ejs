@@ -1,0 +1,45 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Relatórios</h1>
+</div>
+
+<div class="row g-3">
+  <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+    <div class="col-12 col-md-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 card-title">Doações</h2>
+          <p class="card-text text-muted">
+            Doações recebidas e distribuídas por período (RF_26).
+          </p>
+          <a href="/relatorios/doacoes" class="btn btn-primary">Abrir</a>
+        </div>
+      </div>
+    </div>
+  <% } %>
+
+  <div class="col-12 col-md-4">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body">
+        <h2 class="h5 card-title">Atendimentos</h2>
+        <p class="card-text text-muted">
+          Atendimentos realizados por período, por beneficiário (RF_27).
+        </p>
+        <a href="/relatorios/atendimentos" class="btn btn-primary">Abrir</a>
+      </div>
+    </div>
+  </div>
+
+  <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+    <div class="col-12 col-md-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 card-title">Campanhas</h2>
+          <p class="card-text text-muted">
+            Campanhas com resultados consolidados (RF_28).
+          </p>
+          <a href="/relatorios/campanhas" class="btn btn-primary">Abrir</a>
+        </div>
+      </div>
+    </div>
+  <% } %>
+</div>

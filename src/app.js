@@ -24,6 +24,7 @@ import cursosRoutes from './modules/cursos/cursos.routes.js';
 import matriculasRoutes from './modules/matriculas/matriculas.routes.js';
 import frequenciaRoutes from './modules/frequencia/frequencia.routes.js';
 import certificadosRoutes from './modules/certificados/certificados.routes.js';
+import relatoriosRoutes from './modules/relatorios/relatorios.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -75,6 +76,7 @@ app.use('/cursos', cursosRoutes);
 app.use('/matriculas', matriculasRoutes);
 app.use('/frequencia', frequenciaRoutes);
 app.use('/certificados', certificadosRoutes);
+app.use('/relatorios', relatoriosRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
