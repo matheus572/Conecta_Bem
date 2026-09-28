@@ -80,19 +80,20 @@ Antes de codar, os três pontos listados como risco no plano (§8 e §9) foram
 **confirmados com o time** por meio de pergunta direta. As respostas estão
 abaixo e detalham o desenho adotado.
 
-### 8. Estoque controlado por TIPO de doação (não por item)
-- **Decisão**: `estoque` é agregado por `tipo_doacao`
+### 8. ~~Estoque controlado por TIPO de doação (não por item)~~ — ✅ SUPERADA na Sprint 6
+- **Decisão (Sprint 2, SUPERADA)**: `estoque` era agregado por `tipo_doacao`
   (`ALIMENTOS`, `ROUPAS`, `MOVEIS_UTENSILIOS`, `OUTROS`), com uma linha por
-  tipo, `quantidade` (saldo) e `estoque_minimo` (RF_16). Não há `item_doacao`.
-- **Motivo**: interpretação mais simples e conservadora que preserva a
-  documentação — RF_13 lista apenas tipos (não itens), e o DER (§10.2) liga
-  "Uma doação pode atualizar vários itens do estoque" sem nunca modelar os
-  itens (pergunta em aberto nº 2 do plano). O controle por item, se necessário,
-  fica para sprint futura.
-- **Consequência**: os campos `nome_item`/`unidade`/`localizacao` do modelo
-  conceitual (§10.1) foram substituídos por uma linha por tipo; `unidade` é
-  tratada como "unidades" genéricas.
-- **Onde**: `migrations/007_estoque.sql`, `src/modules/estoque/*`.
+  tipo, `quantidade` (saldo) e `estoque_minimo` (RF_16). Não havia
+  `item_doacao`.
+- **Motivo da decisão original**: interpretação mais simples e conservadora —
+  RF_13 lista apenas tipos (não itens). O controle por item ficou explícito
+  como evolução de sprint futura.
+- **Superssão**: na Sprint 6 o time confirmou a necessidade de granularidade
+  por item (ver **decisão nº 33**, adiante). A tabela `estoque` por tipo foi
+  renomeada para `estoque_legado` (read-only) e recriada por `item_id`.
+- **Consequência que permanece**: o campo `localizacao` do modelo conceitual
+  (§10.1) segue fora de escopo; `unidade` voltou, agora por item
+  (`item_doacao.unidade`).
 
 ### 9. Doações em dinheiro fora do escopo desta sprint
 - **Decisão**: doação monetária **não** entra na Sprint 2. A coluna `valor`
@@ -104,13 +105,15 @@ abaixo e detalham o desenho adotado.
   regras próprias fora do escopo atual.
 - **Onde**: `migrations/006_doacao.sql` (coluna `valor` reservada).
 
-### 10. Estoque mínimo (RF_16/RF_S04) por TIPO
-- **Decisão**: `estoque_minimo` é um valor por tipo de doação, editável na tela
-  de estoque. Alerta visual ("Estoque abaixo do mínimo") quando
-  `quantidade < estoque_minimo`; sem notificação por e-mail (SMTP fora do MVP).
-- **Motivo**: acompanha a granularidade por tipo decidida acima; RF_16 fala em
-  "estoque de determinado tipo de doação".
-- **Onde**: `src/modules/estoque/*`, `src/views/estoque/list.ejs`.
+### 10. Estoque mínimo (RF_16/RF_S04) — anotado na Sprint 6: agora por ITEM
+- **Decisão**: `estoque_minimo` é editável na tela de estoque. Alerta visual
+  ("Estoque abaixo do mínimo") e indicador do dashboard quando
+  `quantidade < estoque_minimo`; sem notificação por e-mail.
+- **Atualização (Sprint 6)**: a chave deixou de ser o tipo e passou a ser o
+  **item** (`estoque.item_id` → `item_doacao`), acompanhando a nº 33. O badge
+  e o card do dashboard mostram o **nome do item**, não mais o tipo.
+- **Onde**: `src/modules/estoque/*`, `src/views/estoque/list.ejs`,
+  `src/modules/dashboard/*`.
 
 ### 11. "Status" do RF_17 interpretado como status do estoque
 - **Decisão**: a filtragem por "tipo, período e **status**" (RF_17) foi
@@ -366,3 +369,70 @@ Os três pontos em aberto desta sprint (plano §8 itens 4 e 5; plano §9.3) fora
   HTTP simples não enviava o cookie de sessão com `Secure`, quebrando o
   login em produção. Detectado no teste de fumaça do compose de produção.
 - **Onde**: `src/app.js`.
+
+---
+
+## Sprint 6 — Refatoração do estoque para granularidade por item
+
+### 33. Estoque passa a ser por ITEM (supera a decisão nº 8)
+- **Decisão**: confirmada com o time. Nova tabela `item_doacao` (`nome_item`,
+  `tipo_doacao`, `unidade`, `ativo`, com `UNIQUE(nome_item, tipo_doacao)`) +
+  `estoque` recriada por `item_id`. `doacao`/`distribuicao` ganham `item_id`
+  FK e PASSAM a preenchê-lo — `tipo_doacao` continua gravado e é DERIVADO do
+  item (preserva agregados por tipo, RF_26).
+- **Modelagem incremental**: `RENAME estoque → estoque_legado` (preservada
+  read-only como referência auditável da migração — confirmado com o time) +
+  `CREATE estoque` por item; ALTERs em `doacao`/`distribuicao`. Constraints de
+  CHECK novas receberam nomes distintos (o InnoDB exige unicidade por schema —
+  o rename preserva as da tabela legada).
+- **CRUD de itens**: criar/editar/desativar somente ADMINISTRADOR (Consulta
+  liberada); criação do item cria a linha de estoque zerada na mesma transação;
+  desativação é soft (item some dos <select>, histórico preservado); o **tipo
+  do item não é editável** pós-criação (alterar deslocaria saldos entre tipos
+  — criar um item novo e desativar o antigo).
+- **Onde**: `migrations/021`-`024`, `src/modules/estoque/*`,
+  `src/modules/doacoes/*`, `src/modules/campanhas/*` (Resultados RF_24
+  selecionam item), views correspondentes.
+
+### 34. Dados históricos: item genérico "Outros [tipo]" recebe o saldo (backfill documentado)
+- **Decisão**: confirmada com o time. Na migration `024_backfill_item_generico.sql`,
+  para cada tipo é criado o item genérico (`NOME_ITEM_GENERICO` em
+  `src/utils/tiposDoacao.js` — deve espelhar a migration); o saldo e o mínimo
+  por tipo de `estoque_legado` migram para a linha do genérico; doações e
+  distribuições históricas (`item_id NULL`) são vinculadas a ele. O genérico
+  permanece disponível como catch-all; novas movimentações referenciam item
+  específico.
+- **Motivo**: movimentações pré-Sprint 6 só tinham tipo — atribuí-las a um item
+  específico inventaria informação (briefing). Nenhum dado é apagado: o saldo
+  total é preservado e verificável contra `estoque_legado`.
+- **Nota**: nomes com pequenos ajustes gramaticais ao padrão literal proposto
+  ("Outros [tipo]"): `Outros Alimentos`, `Outros Roupas`,
+  `Outros Móveis e utensílios`, `Outros (diversos)` para o tipo `OUTROS`
+  (evitar "Outros Outros").
+- **Onde**: `migrations/024_backfill_item_generico.sql`,
+  `tests/integration/migracao-estoque.test.js` (reproduz o schema legado em um
+  banco descartável do db-test e verifica backfill + preservação).
+
+### 35. Relatório de doações (RF_26) com os dois níveis na mesma tela
+- **Decisão**: confirmada com o time. Padrão continua consolidado por tipo
+  (compatível com Sprint 5), com segunda seção "Detalhamento por item" na tela
+  e nas exportações (PDF/xlsx ganham seções/abas). Sem mudança de URL/filtros.
+- **Onde**: `src/modules/relatorios/*`, `src/utils/exportacao.js`,
+  `src/views/relatorios/doacoes.ejs`.
+
+### 36. migrate.js ganha pool dedicado com `multipleStatements`
+- **Decisão**: `migrations/migrate.js` cria pool próprio (via `src/config/env.js`)
+  com `multipleStatements: true`; o pool da aplicação (`src/config/db.js`)
+  segue sem essa opção (a opção liga-se por conexão, não por configuração de
+  pool do app — mantemos o app minimamente restrito).
+- **Motivo**: migrations da Sprint 6 executam vários statements por arquivo
+  (ALTER + backfill), como passo documentado exigido pelo briefing.
+- **Onde**: `migrations/migrate.js` (assinatura `runMigrations(pool?)` preservada).
+
+### 37. docker-compose.yml dev aponta para o stage `development` do Dockerfile
+- **Decisão**: `build.target: development` no compose de desenvolvimento.
+- **Motivo**: com o Dockerfile multi-stage da Sprint 5, um build sem target
+  cai no último stage (`production`, `NODE_ENV=production`), e o
+  `npm install` do entrypoint REMOVIA devDependencies do volume `node_modules`
+  (vitest sumia). Detectado e corrigido nesta sprint.
+- **Onde**: `docker-compose.yml`.
