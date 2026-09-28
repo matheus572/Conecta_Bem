@@ -1,16 +1,23 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
   <h1 class="h3 mb-0">Estoque</h1>
+  <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+    <a href="/estoque/itens/novo" class="btn btn-primary">Novo item</a>
+  <% } %>
 </div>
 
 <% const baixos = itens.filter(function (i) { return i.abaixo_minimo; }); %>
 <% if (baixos.length) { %>
   <div class="alert alert-warning" role="alert">
-    <strong>Atenção (RF_16):</strong> <%= baixos.length %> tipo(s) abaixo do estoque mínimo.
-    Considere priorizar doações desses tipos.
+    <strong>Atenção (RF_16):</strong> <%= baixos.length %> item(ns) abaixo do estoque mínimo.
+    Considere priorizar doações desses itens.
   </div>
 <% } %>
 
 <form method="get" action="/estoque" class="row g-2 mb-3">
+  <div class="col-12 col-md-4">
+    <input type="search" class="form-control" name="q" value="<%= q %>"
+      placeholder="Buscar por nome do item (ex.: leite)" aria-label="Buscar por item">
+  </div>
   <div class="col-6 col-md-3">
     <select class="form-select" name="tipo">
       <option value="">Todos os tipos</option>
@@ -26,7 +33,7 @@
       <option value="baixo" <%= status === 'baixo' ? 'selected' : '' %>>Abaixo do mínimo</option>
     </select>
   </div>
-  <div class="col-12 col-md-3">
+  <div class="col-12 col-md-2">
     <button type="submit" class="btn btn-outline-primary w-100">Filtrar</button>
   </div>
 </form>
@@ -35,24 +42,40 @@
   <table class="table table-striped align-middle">
     <thead>
       <tr>
+        <th>Item</th>
         <th>Tipo</th>
+        <th>Unidade</th>
         <th class="text-end">Quantidade disponível</th>
         <th class="text-end">Estoque mínimo</th>
         <th>Status</th>
+        <% if (currentUser.perfil === 'ADMINISTRADOR') { %><th></th><% } %>
       </tr>
     </thead>
     <tbody>
       <% if (!itens.length) { %>
-        <tr><td colspan="4" class="text-center text-muted">Nenhum item encontrado.</td></tr>
+        <tr>
+          <td colspan="<%= currentUser.perfil === 'ADMINISTRADOR' ? 7 : 6 %>" class="text-center text-muted">
+            Nenhum item encontrado.
+          </td>
+        </tr>
       <% } %>
       <% itens.forEach(function (item) { %>
         <tr class="<%= item.abaixo_minimo ? 'table-danger' : '' %>">
+          <td>
+            <%= item.nome_item %>
+            <% if (!item.ativo) { %><span class="badge text-bg-secondary">Inativo</span><% } %>
+          </td>
           <td><%= rotulos[item.tipo_doacao] || item.tipo_doacao %></td>
+          <td><%= item.unidade %></td>
           <td class="text-end"><%= item.quantidade %></td>
           <td class="text-end">
-            <form method="post" action="/estoque/<%= item.tipo_doacao %>/minimo?_method=PUT" class="d-inline-flex align-items-center gap-1">
+            <form method="post" action="/estoque/<%= item.item_id %>/minimo?_method=PUT<%
+              const minParams = [];
+              if (tipo) minParams.push('tipo=' + encodeURIComponent(tipo));
+              if (q) minParams.push('q=' + encodeURIComponent(q));
+            %><%= minParams.length ? '&' + minParams.join('&') : '' %>" class="d-inline-flex align-items-center gap-1 justify-content-end">
               <input type="hidden" name="_method" value="PUT">
-              <input type="number" step="0.01" min="0" class="form-control form-control-sm" name="estoque_minimo" value="<%= item.estoque_minimo %>" style="width: 100px;">
+              <input type="number" step="0.01" min="0" class="form-control form-control-sm" name="estoque_minimo" value="<%= item.estoque_minimo %>" style="width: 100px;" aria-label="Estoque mínimo de <%= item.nome_item %>">
               <button type="submit" class="btn btn-sm btn-outline-secondary">Salvar</button>
             </form>
           </td>
@@ -63,6 +86,18 @@
               <span class="badge text-bg-success">OK</span>
             <% } %>
           </td>
+          <% if (currentUser.perfil === 'ADMINISTRADOR') { %>
+            <td class="text-end">
+              <a href="/estoque/itens/<%= item.item_id %>/editar" class="btn btn-sm btn-outline-primary">Editar</a>
+              <form method="post" action="/estoque/itens/<%= item.item_id %>/ativo?_method=PUT" class="d-inline">
+                <input type="hidden" name="_method" value="PUT">
+                <input type="hidden" name="ativo" value="<%= item.ativo ? '0' : '1' %>">
+                <button type="submit" class="btn btn-sm <%= item.ativo ? 'btn-outline-danger' : 'btn-outline-success' %>">
+                  <%= item.ativo ? 'Desativar' : 'Reativar' %>
+                </button>
+              </form>
+            </td>
+          <% } %>
         </tr>
       <% }) %>
     </tbody>

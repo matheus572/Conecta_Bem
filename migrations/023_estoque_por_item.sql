@@ -17,6 +17,8 @@ CREATE TABLE `estoque` (
   UNIQUE KEY `uq_estoque_item` (`item_id`),
   CONSTRAINT `fk_estoque_item` FOREIGN KEY (`item_id`)
     REFERENCES `item_doacao` (`id`),
-  CONSTRAINT `chk_estoque_quantidade_nao_negativa` CHECK (`quantidade` >= 0),
-  CONSTRAINT `chk_estoque_minimo_nao_negativo` CHECK (`estoque_minimo` >= 0)
+  -- Nomes de CHECK distintos dos da tabela legada (o InnoDB exige nomes de
+  -- constraint únicos por schema; a tabela antiga segue como estoque_legado).
+  CONSTRAINT `chk_estoque_item_qtd_nao_negativa` CHECK (`quantidade` >= 0),
+  CONSTRAINT `chk_estoque_item_min_nao_negativo` CHECK (`estoque_minimo` >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

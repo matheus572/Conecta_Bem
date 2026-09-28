@@ -30,14 +30,10 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO `estoque` (`item_id`, `quantidade`, `estoque_minimo`)
-SELECT el.tipo_doacao_id AS item_id, el.quantidade, el.estoque_minimo
-FROM (
-  SELECT i.id AS tipo_doacao_id, leg.quantidade, leg.estoque_minimo, leg.tipo_doacao
-    FROM `estoque_legado` leg
-    JOIN `item_doacao` i
-      ON i.tipo_doacao = leg.tipo_doacao AND i.nome_item LIKE 'Outros%'
-) el
-WHERE NOT EXISTS (SELECT 1 FROM `estoque` e WHERE e.item_id = el.tipo_doacao_id);
+SELECT i.id, leg.quantidade, leg.estoque_minimo
+  FROM `estoque_legado` leg
+  JOIN `item_doacao` i ON i.tipo_doacao = leg.tipo_doacao AND i.nome_item LIKE 'Outros%'
+ WHERE NOT EXISTS (SELECT 1 FROM `estoque` e WHERE e.item_id = i.id);
 
 UPDATE `doacao` d
   JOIN `item_doacao` i ON i.tipo_doacao = d.tipo_doacao AND i.nome_item LIKE 'Outros%'
