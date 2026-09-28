@@ -66,15 +66,16 @@
     <div class="table-responsive">
       <table class="table table-striped align-middle">
         <thead>
-          <tr><th>Beneficiário</th><th>Tipo</th><th class="text-end">Quantidade</th></tr>
+          <tr><th>Beneficiário</th><th>Item</th><th>Tipo</th><th class="text-end">Quantidade</th></tr>
         </thead>
         <tbody>
           <% if (!distribuicoes.length) { %>
-            <tr><td colspan="3" class="text-center text-muted">Nenhuma doação distribuída.</td></tr>
+            <tr><td colspan="4" class="text-center text-muted">Nenhuma doação distribuída.</td></tr>
           <% } %>
           <% distribuicoes.forEach(function (di) { %>
             <tr>
               <td><%= di.beneficiario_nome %></td>
+              <td><%= di.item_nome || '—' %></td>
               <td><%= rotulosTipos[di.tipo_doacao] || di.tipo_doacao %></td>
               <td class="text-end"><%= di.quantidade %></td>
             </tr>

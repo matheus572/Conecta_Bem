@@ -3,14 +3,20 @@
 import { TIPOS_DOACAO, ROTULOS_TIPOS_DOACAO } from '../../utils/tiposDoacao.js';
 import { ROTULOS_STATUS_CAMPANHA } from './campanhas.service.js';
 import * as service from './campanhas.service.js';
+import * as estoqueService from '../estoque/estoque.service.js';
 import * as beneficiariosService from '../beneficiarios/beneficiarios.service.js';
 
 function notFound(res, message) {
   res.status(404).render('pages/error', { title: 'Erro 404', status: 404, message });
 }
 
-function tiposParaView() {
-  return TIPOS_DOACAO.map((tipo) => ({ valor: tipo, rotulo: ROTULOS_TIPOS_DOACAO[tipo] }));
+/** Itens ativos agrupados por tipo, para o <select> de resultados (RF_24). */
+function itensPorTipo(itens) {
+  return TIPOS_DOACAO.map((tipo) => ({
+    tipo,
+    rotulo: ROTULOS_TIPOS_DOACAO[tipo],
+    itens: itens.filter((i) => i.tipo_doacao === tipo),
+  })).filter((grupo) => grupo.itens.length);
 }
 
 async function listar(req, res) {
@@ -149,11 +155,12 @@ async function formularioResultados(req, res) {
   if (!campanha) return notFound(res, 'Campanha não encontrada.');
 
   const beneficiarios = await beneficiariosService.listar({});
+  const itens = itensPorTipo(await estoqueService.listarItensParaSelecao());
   res.render('campanhas/resultados', {
     title: 'Registrar resultados',
     campanha,
     beneficiarios,
-    tipos: tiposParaView(),
+    itens,
     erro: null,
   });
 }

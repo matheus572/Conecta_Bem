@@ -18,11 +18,17 @@
       </div>
 
       <div class="mb-3">
-        <label for="tipo_doacao" class="form-label">Tipo</label>
-        <select class="form-select" id="tipo_doacao" name="tipo_doacao" required>
+        <label for="item_id" class="form-label">Item</label>
+        <select class="form-select" id="item_id" name="item_id" required>
           <option value="">Selecione…</option>
-          <% tipos.forEach(function (t) { %>
-            <option value="<%= t.valor %>" <%= form.tipo_doacao === t.valor ? 'selected' : '' %>><%= t.rotulo %></option>
+          <% itens.forEach(function (grupo) { %>
+            <optgroup label="<%= grupo.rotulo %>">
+              <% grupo.itens.forEach(function (item) { %>
+                <option value="<%= item.id %>" <%= String(form.item_id) === String(item.id) ? 'selected' : '' %>>
+                  <%= item.nome_item %> (<%= item.unidade %>)
+                </option>
+              <% }) %>
+            </optgroup>
           <% }) %>
         </select>
       </div>

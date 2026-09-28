@@ -31,6 +31,7 @@
     <thead>
       <tr>
         <th>Data</th>
+        <th>Item</th>
         <th>Tipo</th>
         <th>Doador</th>
         <th class="text-end">Quantidade</th>
@@ -39,11 +40,12 @@
     </thead>
     <tbody>
       <% if (!doacoes.length) { %>
-        <tr><td colspan="5" class="text-center text-muted">Nenhuma doação encontrada.</td></tr>
+        <tr><td colspan="6" class="text-center text-muted">Nenhuma doação encontrada.</td></tr>
       <% } %>
       <% doacoes.forEach(function (d) { %>
         <tr>
           <td><%= d.data_doacao %></td>
+          <td><%= d.item_nome || '—' %></td>
           <td><%= d.tipo_doacao %></td>
           <td><%= d.doador_nome %></td>
           <td class="text-end"><%= d.quantidade %></td>

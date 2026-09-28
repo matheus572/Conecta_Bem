@@ -1,18 +1,29 @@
 // doacoes.service.js — regras de doações e distribuições (RF_13, RF_15, RN03).
 //
+// Sprint 6: as movimentações referenciam um ITEM (`item_id`, de item_doacao),
+// não mais apenas o tipo. O `tipo_doacao` gravado na movimentação é DERIVADO
+// do item (continua na tabela para agrupamentos/relatórios por tipo).
+//
 // Toda movimentação que afeta o estoque roda em uma transação real
 // (getConnection → beginTransaction → operações → commit/rollback), conforme
-// seção 1.3 do plano. A distribuição usa `SELECT ... FOR UPDATE` no saldo
-// (estoque.repository) para impedir corrida entre saídas simultâneas.
+// seção 1.3 do plano. A distribuição usa `SELECT ... FOR UPDATE` no saldo do
+// item (estoque.repository) para impedir corrida entre saídas simultâneas.
 import { pool } from '../../config/db.js';
-import { isTipoValido } from '../../utils/tiposDoacao.js';
 import * as doacaoRepo from './doacoes.repository.js';
 import * as estoqueRepo from '../estoque/estoque.repository.js';
 import * as doadoresRepo from '../doadores/doadores.repository.js';
 import * as beneficiariosRepo from '../beneficiarios/beneficiarios.repository.js';
 
-function validarTipo(tipo) {
-  if (!isTipoValido(tipo)) throw new Error('Tipo de doação inválido.');
+/** Valida e resolve o item da movimentação (precisa existir e estar ativo). */
+async function resolverItem(itemIdBruto) {
+  const itemId = Number(itemIdBruto);
+  if (!Number.isInteger(itemId) || itemId <= 0) {
+    throw new Error('Selecione um item válido.');
+  }
+  const item = await estoqueRepo.findItemById(itemId);
+  if (!item) throw new Error('Item não encontrado.');
+  if (!item.ativo) throw new Error('Este item está desativado. Selecione outro item.');
+  return item;
 }
 
 function validarQuantidade(quantidade) {
@@ -31,7 +42,7 @@ function normalizarData(data) {
 }
 
 async function registrarDoacao(dados, usuarioId = null) {
-  validarTipo(dados.tipo_doacao);
+  const item = await resolverItem(dados.item_id);
   const quantidade = validarQuantidade(dados.quantidade);
   const data = normalizarData(dados.data_doacao);
   const doadorId = Number(dados.doador_id);
@@ -48,7 +59,8 @@ async function registrarDoacao(dados, usuarioId = null) {
     await doacaoRepo.criarDoacao(
       {
         doadorId,
-        tipo: dados.tipo_doacao,
+        itemId: item.id,
+        tipo: item.tipo_doacao,
         quantidade,
         descricao: String(dados.descricao || '').trim() || null,
         data,
@@ -56,7 +68,7 @@ async function registrarDoacao(dados, usuarioId = null) {
       },
       conn,
     );
-    await estoqueRepo.incrementar(dados.tipo_doacao, quantidade, conn);
+    await estoqueRepo.incrementar(item.id, quantidade, conn);
     await conn.commit();
   } catch (err) {
     await conn.rollback();
@@ -67,7 +79,7 @@ async function registrarDoacao(dados, usuarioId = null) {
 }
 
 async function registrarDistribuicao(dados, usuarioId = null, campanhaId = null) {
-  validarTipo(dados.tipo_doacao);
+  const item = await resolverItem(dados.item_id);
   const quantidade = validarQuantidade(dados.quantidade);
   const data = normalizarData(dados.data_distribuicao);
   const beneficiarioId = Number(dados.beneficiario_id);
@@ -82,7 +94,7 @@ async function registrarDistribuicao(dados, usuarioId = null, campanhaId = null)
   try {
     await conn.beginTransaction();
 
-    const saldo = await estoqueRepo.obterSaldoParaAtualizacao(dados.tipo_doacao, conn);
+    const saldo = await estoqueRepo.obterSaldoParaAtualizacao(item.id, conn);
     if (saldo === null || saldo < quantidade) {
       throw new Error('Estoque insuficiente para esta distribuição.');
     }
@@ -91,7 +103,8 @@ async function registrarDistribuicao(dados, usuarioId = null, campanhaId = null)
       {
         beneficiarioId,
         campanhaId,
-        tipo: dados.tipo_doacao,
+        itemId: item.id,
+        tipo: item.tipo_doacao,
         quantidade,
         descricao: String(dados.descricao || '').trim() || null,
         data,
@@ -99,7 +112,7 @@ async function registrarDistribuicao(dados, usuarioId = null, campanhaId = null)
       },
       conn,
     );
-    await estoqueRepo.decrementar(dados.tipo_doacao, quantidade, conn);
+    await estoqueRepo.decrementar(item.id, quantidade, conn);
 
     await conn.commit();
   } catch (err) {

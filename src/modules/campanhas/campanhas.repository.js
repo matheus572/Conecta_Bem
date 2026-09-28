@@ -119,9 +119,11 @@ async function listAtendimentos(campanhaId) {
 
 async function listDistribuicoes(campanhaId) {
   const [rows] = await pool.query(
-    `SELECT d.id, d.data_distribuicao, d.tipo_doacao, d.quantidade, b.nome AS beneficiario_nome
+    `SELECT d.id, d.data_distribuicao, d.tipo_doacao, d.quantidade, b.nome AS beneficiario_nome,
+            i.nome_item AS item_nome
        FROM distribuicao d
        JOIN beneficiario b ON b.id = d.beneficiario_id
+       LEFT JOIN item_doacao i ON i.id = d.item_id
        WHERE d.campanha_id = ?
        ORDER BY d.data_distribuicao DESC, d.id DESC`,
     [campanhaId],
