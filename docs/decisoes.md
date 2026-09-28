@@ -436,3 +436,63 @@ Os três pontos em aberto desta sprint (plano §8 itens 4 e 5; plano §9.3) fora
   `npm install` do entrypoint REMOVIA devDependencies do volume `node_modules`
   (vitest sumia). Detectado e corrigido nesta sprint.
 - **Onde**: `docker-compose.yml`.
+
+---
+
+## Sprint 7 — Registro de doação com item digitado e criação automática
+
+### 38. COLABORADOR pode criar item novo pelo formulário de doação
+- **Decisão**: confirmada com o time (refina a nº 33). O `COLABORADOR` cria
+  item NÃO pelo CRUD administrativo, mas como efeito do registro de doação
+  recebida (RF_F01 é X/X na matriz §12.2). Editar, renomear e desativar itens
+  continuam restritos ao ADMINISTRADOR (demo/teste: 403 em `/estoque/itens`).
+- **Onde**: `doacoes.service.js` → `estoque.service.resolverOuCriarItem`;
+  `tests/integration/doacao-criacao-item.test.js`.
+
+### 39. Mesmo nome em categoria diferente é rejeitado (constraint intacta)
+- **Decisão**: confirmada com o time. A `UNIQUE(nome_item, tipo_doacao)` NÃO
+  mudou; o service rejeita com "Já existe o item 'X' na categoria Y.
+  Selecione essa categoria ou use outro nome". A busca por nome é em QUALQUER
+  categoria justamente para detectar esse conflito antes do INSERT.
+- **Onde**: `estoque.service.resolverOuCriarItem` (erroItemEmOutraCategoria).
+
+### 40. Item desativado é reativado na transação da doação (+auditoria)
+- **Decisão**: confirmada com o time. Se o item existe com `ativo = 0`, a
+  doação o reativa DENTRO da transação (a doação real aconteceu: o saldo
+  precisa existir) e grava `EDICAO` em `audit_log` com o usuário responsável.
+  A criação de item novo também é auditada (`CRIACAO`). A gravação usa
+  `utils/auditoria.js` (extraída do middleware — o log roda na mesma
+  conexão da transação, então falha do rollback apaga o log junto).
+- **Onde**: `src/utils/auditoria.js`, `src/middlewares/audit.js`,
+  `src/modules/estoque/estoque.service.js` (reativarItem).
+
+### 41. Unidade por select (UN/KG/G/L/ML/CX/PCT/PAR), UN como padrão
+- **Decisão**: confirmada com o time. Pedida só na criação de item pelo
+  formulário de doação; para item existente é exibida e não editável (o
+  service ignora a unidade do form quando o item já existe).
+- **Onde**: `src/utils/tiposDoacao.js` (`UNIDADES_ITEM`), `views/doacoes/form.ejs`.
+
+### 42. Collation verificada: `nome_item` ignora caixa E acentos
+- **Verificação empírica** (MySQL 8 do docker-compose.dev), com a consulta
+  sugerida pelo time:
+  ```
+  SELECT 'leite 1l' = 'Leite 1L'  COLLATE utf8mb4_unicode_ci; -- 1 (ignora caixa)
+  SELECT 'feijao'  = 'feijão'     COLLATE utf8mb4_unicode_ci; -- 1 (ignora ACENTO)
+  ```
+  A coluna `item_doacao.nome_item` é `utf8mb4_unicode_ci` (padrão da tabela),
+  então a deduplicação por nome — inclusive a UNIQUE — ignora caixa e acentos.
+  Consequência prática: "Feijão 1kg" e "FEIJAO 1kg" são o mesmo item (coberto
+  por teste de integração).
+
+### 43. Concorrência na criação de item: ER_DUP_ENTRY + re-busca FOR UPDATE
+- **Decisão técnica**: duas doações simultâneas com o mesmo nome novo NÃO
+  podem gerar erro 500 nem itens duplicados. O primeiro fluxo tentado
+  (lookup com `FOR UPDATE` direto) causava DEADLOCK (gap locks + intenções de
+  inserção empatadas). Solução: lookup comum → INSERT otimista → em
+  `ER_DUP_ENTRY` (a UNIQUE serializa) re-buscar com `FOR UPDATE`. Ponto
+  sutil: em REPEATABLE READ o SELECT comum usa o snapshot do início da
+  transação e não enxerga o row commitado pela outra transação DEPOIS — o
+  FOR UPDATE força leitura atual. Coberto por teste executando a corrida
+  2×/3× em sequência.
+- **Onde**: `estoque.service.resolverOuCriarItem`,
+  `tests/integration/doacao-criacao-item.test.js`.
