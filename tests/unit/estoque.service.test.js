@@ -6,10 +6,15 @@ vi.mock('../../src/config/db.js', () => ({
   pool: { getConnection: vi.fn() },
 }));
 
+vi.mock('../../src/utils/auditoria.js', () => ({
+  registrarAuditoria: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../src/modules/estoque/estoque.repository.js', () => ({
   listar: vi.fn(),
   listarItensAtivos: vi.fn(),
   findItemById: vi.fn(),
+  findItemPorNome: vi.fn(),
   findItemPorNomeTipo: vi.fn(),
   criarItem: vi.fn(),
   criarEstoqueVazio: vi.fn(),
@@ -22,8 +27,11 @@ vi.mock('../../src/modules/estoque/estoque.repository.js', () => ({
 }));
 
 import { pool } from '../../src/config/db.js';
+import { registrarAuditoria } from '../../src/utils/auditoria.js';
 import * as repository from '../../src/modules/estoque/estoque.repository.js';
 import * as service from '../../src/modules/estoque/estoque.service.js';
+
+const audit = vi.mocked(registrarAuditoria);
 
 const repo = vi.mocked(repository);
 const getConn = vi.mocked(pool.getConnection);
@@ -139,5 +147,114 @@ describe('estoque.service — CRUD de itens', () => {
     await expect(
       service.atualizarItem('1', { nome_item: 'Arroz 5kg', unidade: 'KG' }),
     ).rejects.toThrow('Já existe um item com este nome neste tipo.');
+  });
+});
+
+describe('estoque.service — resolverOuCriarItem (Sprint 7)', () => {
+  it('normaliza o nome: trim, colapso de espaços, vazio e >120 rejeitados', () => {
+    expect(service.normalizarNomeItem('  Leite   1L  ')).toBe('Leite 1L');
+    expect(() => service.normalizarNomeItem('   ')).toThrow('Informe o nome do item.');
+    expect(() => service.normalizarNomeItem('x'.repeat(121))).toThrow('120 caracteres');
+  });
+
+  it('encontra item existente no mesmo tipo e devolve sem criar nada', async () => {
+    repo.findItemPorNome.mockResolvedValue({
+      id: 5,
+      nome_item: 'Leite 1L',
+      tipo_doacao: 'ALIMENTOS',
+      unidade: 'L',
+      ativo: 1,
+    });
+
+    const item = await service.resolverOuCriarItem(
+      { nomeBruto: 'leite 1l', tipo: 'ALIMENTOS', unidade: 'KG' },
+      conn,
+    );
+    expect(item.id).toBe(5);
+    expect(repo.criarItem).not.toHaveBeenCalled();
+    // unidade do form é ignorada para item existente.
+  });
+
+  it('mesmo nome em OUTRA categoria é rejeitado com mensagem clara', async () => {
+    repo.findItemPorNome.mockResolvedValue({
+      id: 5,
+      nome_item: 'Leite 1L',
+      tipo_doacao: 'ALIMENTOS',
+      unidade: 'L',
+      ativo: 1,
+    });
+
+    await expect(
+      service.resolverOuCriarItem({ nomeBruto: 'Leite 1L', tipo: 'OUTROS', unidade: 'L' }, conn),
+    ).rejects.toThrow("Já existe o item 'Leite 1L' na categoria Alimentos");
+
+    expect(repo.criarItem).not.toHaveBeenCalled();
+  });
+
+  it('item desativado é reativado dentro da transação e auditado', async () => {
+    repo.findItemPorNome.mockResolvedValue({
+      id: 5,
+      nome_item: 'Leite 1L',
+      tipo_doacao: 'ALIMENTOS',
+      unidade: 'L',
+      ativo: 0,
+    });
+
+    const item = await service.resolverOuCriarItem(
+      { nomeBruto: 'Leite 1L', tipo: 'ALIMENTOS', unidade: 'L' },
+      conn,
+      9,
+    );
+    expect(item.id).toBe(5);
+    expect(repo.setItemAtivo).toHaveBeenCalledWith(5, true, conn);
+    expect(audit).toHaveBeenCalledWith(
+      expect.objectContaining({ usuarioId: 9, acao: 'EDICAO', entidade: 'item_doacao', entidadeId: 5 }),
+      conn,
+    );
+  });
+
+  it('item inexistente é criado (item + estoque zerado) e auditado', async () => {
+    repo.findItemPorNome.mockResolvedValue(null);
+    repo.criarItem.mockResolvedValue(42);
+
+    const item = await service.resolverOuCriarItem(
+      { nomeBruto: 'Leite 1L', tipo: 'ALIMENTOS', unidade: 'L' },
+      conn,
+      9,
+    );
+
+    expect(item).toMatchObject({ id: 42, nome_item: 'Leite 1L', tipo_doacao: 'ALIMENTOS' });
+    expect(repo.criarItem).toHaveBeenCalledWith({ nome: 'Leite 1L', tipo: 'ALIMENTOS', unidade: 'L' }, conn);
+    expect(repo.criarEstoqueVazio).toHaveBeenCalledWith(42, conn);
+    expect(audit).toHaveBeenCalledWith(
+      expect.objectContaining({ acao: 'CRIACAO', entidade: 'item_doacao', entidadeId: 42 }),
+      conn,
+    );
+  });
+
+  it('ER_DUP_ENTRY na criação re-busca e segue com o item do outro processo', async () => {
+    const erroDup = new Error('Duplicate entry');
+    erroDup.code = 'ER_DUP_ENTRY';
+    repo.findItemPorNome
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 77, nome_item: 'Leite 1L', tipo_doacao: 'ALIMENTOS', unidade: 'L', ativo: 1 });
+    repo.criarItem.mockRejectedValue(erroDup);
+
+    const item = await service.resolverOuCriarItem(
+      { nomeBruto: 'Leite 1L', tipo: 'ALIMENTOS', unidade: 'L' },
+      conn,
+    );
+    expect(item.id).toBe(77);
+    expect(repo.findItemPorNome).toHaveBeenCalledTimes(2);
+    expect(repo.criarEstoqueVazio).not.toHaveBeenCalled();
+  });
+
+  it('rejeita categoria ou unidade inválidas', async () => {
+    await expect(
+      service.resolverOuCriarItem({ nomeBruto: 'Arroz', tipo: 'XYZ', unidade: 'KG' }, conn),
+    ).rejects.toThrow('categoria');
+    await expect(
+      service.resolverOuCriarItem({ nomeBruto: 'Arroz', tipo: 'ALIMENTOS', unidade: 'ZZ' }, conn),
+    ).rejects.toThrow('Unidade inválida');
   });
 });

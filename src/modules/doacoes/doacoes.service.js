@@ -4,6 +4,11 @@
 // não mais apenas o tipo. O `tipo_doacao` gravado na movimentação é DERIVADO
 // do item (continua na tabela para agrupamentos/relatórios por tipo).
 //
+// Sprint 7: o registro de DOAÇÃO (entrada) recebe o NOME do item digitado +
+// categoria (datalist/autocompletar na view); o item é resolvido ou criado
+// automaticamente DENTRO da mesma transação (estoque.service.resolverOuCriarItem).
+// A DISTRIBUIÇÃO continua exigindo um item existente (não cria item).
+//
 // Toda movimentação que afeta o estoque roda em uma transação real
 // (getConnection → beginTransaction → operações → commit/rollback), conforme
 // seção 1.3 do plano. A distribuição usa `SELECT ... FOR UPDATE` no saldo do
@@ -11,10 +16,11 @@
 import { pool } from '../../config/db.js';
 import * as doacaoRepo from './doacoes.repository.js';
 import * as estoqueRepo from '../estoque/estoque.repository.js';
+import * as estoqueService from '../estoque/estoque.service.js';
 import * as doadoresRepo from '../doadores/doadores.repository.js';
 import * as beneficiariosRepo from '../beneficiarios/beneficiarios.repository.js';
 
-/** Valida e resolve o item da movimentação (precisa existir e estar ativo). */
+/** Valida e resolve o item da distribuição (precisa existir e estar ativo). */
 async function resolverItem(itemIdBruto) {
   const itemId = Number(itemIdBruto);
   if (!Number.isInteger(itemId) || itemId <= 0) {
@@ -42,7 +48,6 @@ function normalizarData(data) {
 }
 
 async function registrarDoacao(dados, usuarioId = null) {
-  const item = await resolverItem(dados.item_id);
   const quantidade = validarQuantidade(dados.quantidade);
   const data = normalizarData(dados.data_doacao);
   const doadorId = Number(dados.doador_id);
@@ -53,9 +58,18 @@ async function registrarDoacao(dados, usuarioId = null) {
   const doador = await doadoresRepo.findById(doadorId);
   if (!doador) throw new Error('Doador não encontrado.');
 
+  // Transação única (RN03 + Sprint 7): resolve/cria o item, insere a doação
+  // e incrementa o saldo — se qualquer passo falhar, nada persiste.
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+
+    const item = await estoqueService.resolverOuCriarItem(
+      { nomeBruto: dados.nome_item, tipo: dados.tipo_doacao, unidade: dados.unidade },
+      conn,
+      usuarioId,
+    );
+
     await doacaoRepo.criarDoacao(
       {
         doadorId,

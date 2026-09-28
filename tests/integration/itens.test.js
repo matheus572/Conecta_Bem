@@ -96,9 +96,12 @@ describe('CRUD de itens — matriz §12.2', () => {
       .send({ ativo: '0' });
     expect(desativar.status).toBe(302);
 
+    // Form de doação (datalist — Sprint 7): item desativado some das opções
+    // do seu TIPO (o homônimo em OUTROS continua aparecendo).
     const formDoacao = await colaborador.get('/doacoes/nova');
     expect(formDoacao.status).toBe(200);
-    expect(formDoacao.text).not.toContain(`value="${item.id}"`);
+    expect(formDoacao.text).not.toContain('value="Leite 1L" data-tipo="ALIMENTOS"');
+    expect(formDoacao.text).toContain('value="Leite 1L" data-tipo="OUTROS"');
 
     const lista = await admin.get('/estoque');
     expect(lista.text).toMatch(/Leite 1L[\s\S]*?Inativo/);

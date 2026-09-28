@@ -18,20 +18,97 @@
       </div>
 
       <div class="mb-3">
-        <label for="item_id" class="form-label">Item</label>
-        <select class="form-select" id="item_id" name="item_id" required>
-          <option value="">Selecione…</option>
-          <% itens.forEach(function (grupo) { %>
-            <optgroup label="<%= grupo.rotulo %>">
-              <% grupo.itens.forEach(function (item) { %>
-                <option value="<%= item.id %>" <%= String(form.item_id) === String(item.id) ? 'selected' : '' %>>
-                  <%= item.nome_item %> (<%= item.unidade %>)
-                </option>
-              <% }) %>
-            </optgroup>
+        <label for="nome_item" class="form-label">Item</label>
+        <input type="text" class="form-control" id="nome_item" name="nome_item" maxlength="120"
+          list="lista-itens" value="<%= form.nome_item || '' %>"
+          placeholder="Digite o nome do item (ex.: Leite 1L)" required autocomplete="off">
+        <datalist id="lista-itens">
+          <% itens.forEach(function (item) { %>
+            <option value="<%= item.nome_item %>" data-tipo="<%= item.tipo_doacao %>" data-unidade="<%= item.unidade %>"></option>
           <% }) %>
-        </select>
+        </datalist>
+        <div id="item-aviso" class="form-text"></div>
       </div>
+
+      <div class="row">
+        <div class="mb-3 col-12 col-sm-6">
+          <label for="tipo_doacao" class="form-label">Categoria</label>
+          <select class="form-select" id="tipo_doacao" name="tipo_doacao" required>
+            <option value="">Selecione…</option>
+            <% tipos.forEach(function (t) { %>
+              <option value="<%= t.valor %>" <%= form.tipo_doacao === t.valor ? 'selected' : '' %>><%= t.rotulo %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="mb-3 col-12 col-sm-6">
+          <label for="unidade" class="form-label">Unidade</label>
+          <select class="form-select" id="unidade" name="unidade">
+            <% unidades.forEach(function (u) { %>
+              <option value="<%= u %>" <%= (form.unidade || 'UN') === u ? 'selected' : '' %>><%= u %></option>
+            <% }) %>
+          </select>
+          <div class="form-text">Só é usada ao criar um item novo; para itens existentes, mantém-se a unidade do cadastro.</div>
+        </div>
+      </div>
+
+      <script>
+        // UX: ao digitar um nome que casa com um item já cadastrado (mesma
+        // grafia ignorando caixa/espaços/acentos — coerente com a collation
+        // utf8mb4_unicode_ci do banco), preenche e trava categoria/unidade.
+        // O SERVIDOR é a fonte da verdade: lá tudo é validado de novo.
+        (function () {
+          var input = document.getElementById('nome_item');
+          var aviso = document.getElementById('item-aviso');
+          var tipoSel = document.getElementById('tipo_doacao');
+          var unSel = document.getElementById('unidade');
+          var opcoes = Array.prototype.slice.call(
+            document.querySelectorAll('#lista-itens option'),
+          );
+
+          function norm(txt) {
+            return (txt || '')
+              .trim()
+              .replace(/\s+/g, ' ')
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[̀-ͯ]/g, '');
+          }
+
+          function travar(camada) {
+            // `disabled` impede o envio; 'pointer-events: none' + tabindex
+            // trava visualmente, mas o valor continua sendo enviado.
+            [tipoSel, unSel].forEach(function (el) {
+              el.classList.toggle('pe-none', camada);
+              el.setAttribute('aria-readonly', camada ? 'true' : 'false');
+              el.tabIndex = camada ? -1 : 0;
+            });
+          }
+
+          function atualizarAviso() {
+            var nome = norm(input.value);
+            var encontrado = opcoes.find(function (o) {
+              return norm(o.value) === nome;
+            });
+            if (!nome) {
+              aviso.textContent = '';
+              travar(false);
+              return;
+            }
+            if (encontrado) {
+              tipoSel.value = encontrado.dataset.tipo;
+              unSel.value = encontrado.dataset.unidade;
+              travar(true);
+              aviso.textContent = 'Item já cadastrado: a quantidade será somada ao saldo atual.';
+            } else {
+              travar(false);
+              aviso.textContent = 'Novo item: será criado ao salvar.';
+            }
+          }
+
+          input.addEventListener('input', atualizarAviso);
+          atualizarAviso();
+        })();
+      </script>
 
       <div class="mb-3">
         <label for="quantidade" class="form-label">Quantidade</label>

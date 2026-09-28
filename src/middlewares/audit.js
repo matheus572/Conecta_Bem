@@ -7,7 +7,10 @@
 // payload com dados sensíveis (CPF, situação socioeconômica), evitando
 // duplicar dado pessoal no log (minimização). Falhas na gravação do log não
 // interrompem a requisição: são reportadas no stderr.
-import { pool } from '../config/db.js';
+//
+// A gravação em si está em utils/auditoria.js (compartilhada com os services
+// que precisam auditar dentro de transações — ver decisões Sprint 7).
+import { registrarAuditoria } from '../utils/auditoria.js';
 
 /**
  * Devolve um middleware que registra o acesso no `audit_log` e segue adiante.
@@ -17,12 +20,13 @@ import { pool } from '../config/db.js';
 function auditAccess(entidade, acao) {
   return async (req, res, next) => {
     try {
-      const usuarioId = req.session?.user?.id ?? null;
-      const entidadeId = req.params?.id ? Number(req.params.id) : null;
-      await pool.query(
-        'INSERT INTO `audit_log` (`usuario_id`, `acao`, `entidade`, `entidade_id`, `detalhe`) VALUES (?, ?, ?, ?, ?)',
-        [usuarioId, acao, entidade, entidadeId, `${req.method} ${req.originalUrl}`],
-      );
+      await registrarAuditoria({
+        usuarioId: req.session?.user?.id ?? null,
+        acao,
+        entidade,
+        entidadeId: req.params?.id ? Number(req.params.id) : null,
+        detalhe: `${req.method} ${req.originalUrl}`,
+      });
     } catch (err) {
       console.error('[audit] falha ao registrar log de auditoria:', err);
     }

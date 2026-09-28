@@ -1,8 +1,124 @@
 // estoque.service.js — regras de itens e estoque por item (RF_14, RF_16/RF_S04,
-// busca por item da Sprint 6).
+// busca por item da Sprint 6; criação automática no registro de doação — Sprint 7).
 import { pool } from '../../config/db.js';
-import { isTipoValido } from '../../utils/tiposDoacao.js';
+import { isTipoValido, ROTULOS_TIPOS_DOACAO, UNIDADES_ITEM } from '../../utils/tiposDoacao.js';
+import { registrarAuditoria } from '../../utils/auditoria.js';
 import * as repository from './estoque.repository.js';
+
+/**
+ * Normaliza o nome de item digitado: trim + colapso de espaços internos.
+ * Rejeita vazio e > 120 caracteres. Usada pela criação no CRUD e pela
+ * criação automática no registro de doação (Sprint 7).
+ */
+function normalizarNomeItem(nomeBruto) {
+  const nome = String(nomeBruto || '')
+    .trim()
+    .replace(/\s+/g, ' ');
+  if (!nome) throw new Error('Informe o nome do item.');
+  if (nome.length > 120) {
+    throw new Error('O nome do item deve ter no máximo 120 caracteres.');
+  }
+  return nome;
+}
+
+function erroItemEmOutraCategoria(item) {
+  return new Error(
+    `Já existe o item '${item.nome_item}' na categoria ${ROTULOS_TIPOS_DOACAO[item.tipo_doacao] || item.tipo_doacao}. ` +
+      'Selecione essa categoria ou use outro nome.',
+  );
+}
+
+/** Reativa item desativado dentro da transação + log de auditoria (Sprint 7, decisão 3). */
+async function reativarItem(item, conn, usuarioId) {
+  await repository.setItemAtivo(item.id, true, conn);
+  await registrarAuditoria(
+    {
+      usuarioId,
+      acao: 'EDICAO',
+      entidade: 'item_doacao',
+      entidadeId: item.id,
+      detalhe: 'Item reativado automaticamente no registro de doação',
+    },
+    conn,
+  ).catch((err) => console.error('[audit] falha ao auditar reativação de item:', err));
+}
+
+/**
+ * Resolve o item da movimentação, criando-o quando não existe (Sprint 7).
+ * Deve ser chamada DENTRO da transação do service de doações (mesmo `conn`).
+ *
+ * Regras:
+ * - mesma grafia (a collation ignora caixa E acentos) em categoria diferente
+ *   → erro amigável (decisão 2);
+ * - item existente e inativo → reativado dentro da transação, com auditoria
+ *   (decisão 3);
+ * - item inexistente → INSERT item + estoque zerado na mesma transação
+ *   (erro ER_DUP_ENTRY — p.ex. duas doações simultâneas com o mesmo nome —
+ *   é tratado re-buscando e seguindo com o item que o outro processo criou);
+ * - criação e reativação são registradas no audit_log (§11.3).
+ *
+ * @returns {{id: number, tipo_doacao: string}} o item resolvido.
+ */
+async function resolverOuCriarItem({ nomeBruto, tipo, unidade }, conn, usuarioId = null) {
+  if (!tipo || !isTipoValido(tipo)) {
+    throw new Error('Selecione a categoria do item.');
+  }
+  const unidadeNormalizada = String(unidade || 'UN').trim().toUpperCase() || 'UN';
+  if (!UNIDADES_ITEM.includes(unidadeNormalizada)) {
+    throw new Error('Unidade inválida.');
+  }
+  const nome = normalizarNomeItem(nomeBruto);
+
+  // Lookup simples (sem lock): o índice único é o ponto de serialização de
+  // fato na criação; um SELECT FOR UPDATE no nome causaria deadlock quando
+  // duas doações do MESMO nome novo chegassem simultaneamente (ambos travam o
+  // gap e os INSERTs pedem intenção de inserção no gap um do outro).
+  const existente = await repository.findItemPorNome(nome, conn);
+  if (existente) {
+    if (existente.tipo_doacao !== tipo) {
+      throw erroItemEmOutraCategoria(existente);
+    }
+    if (!existente.ativo) {
+      await reativarItem(existente, conn, usuarioId);
+    }
+    return existente;
+  }
+
+  try {
+    const itemId = await repository.criarItem(
+      { nome, tipo, unidade: unidadeNormalizada },
+      conn,
+    );
+    await repository.criarEstoqueVazio(itemId, conn);
+    await registrarAuditoria(
+      {
+        usuarioId,
+        acao: 'CRIACAO',
+        entidade: 'item_doacao',
+        entidadeId: itemId,
+        detalhe: 'Item criado automaticamente no registro de doação',
+      },
+      conn,
+    ).catch((err) => console.error('[audit] falha ao auditar criação de item:', err));
+    return { id: itemId, nome_item: nome, tipo_doacao: tipo, unidade: unidadeNormalizada, ativo: 1 };
+  } catch (err) {
+    // Concorrência entre doações do mesmo nome novo (ou grafia com acento):
+    // o UNIQUE do banco barra o segundo INSERT (que já aguardou o commit da
+    // vencedora); a re-busca FOR UPDATE força leitura ATUAL — um SELECT
+    // comum usaria o snapshot REPEATABLE READ e não enxergaria o row
+    // commitado pela outra transação depois que a nossa começou.
+    if (err.code !== 'ER_DUP_ENTRY') throw err;
+    const vencedor = await repository.findItemPorNome(nome, conn, { forUpdate: true });
+    if (!vencedor) throw err;
+    if (vencedor.tipo_doacao !== tipo) {
+      throw erroItemEmOutraCategoria(vencedor);
+    }
+    if (!vencedor.ativo) {
+      await reativarItem(vencedor, conn, usuarioId);
+    }
+    return vencedor;
+  }
+}
 
 // --- Listagem/busca do estoque ---
 
@@ -128,4 +244,6 @@ export {
   atualizarItem,
   alternarItemAtivo,
   atualizarMinimo,
+  normalizarNomeItem,
+  resolverOuCriarItem,
 };

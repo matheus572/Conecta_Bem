@@ -1,7 +1,8 @@
 // doacoes.controller.js — handlers de doações e distribuições (RF_13, RF_15, RF_17).
-// Sprint 6: os formulários selecionam ITEM (agrupado por tipo); o tipo é
-// derivado do item no service.
-import { TIPOS_DOACAO, ROTULOS_TIPOS_DOACAO } from '../../utils/tiposDoacao.js';
+// Sprint 6: distribuição seleciona ITEM (select); o tipo é derivado no service.
+// Sprint 7 (RF_13): doação recebe o nome do item digitado (datalist) +
+// categoria; item inexistente é criado automaticamente no service.
+import { TIPOS_DOACAO, ROTULOS_TIPOS_DOACAO, UNIDADES_ITEM } from '../../utils/tiposDoacao.js';
 import * as doacoesService from './doacoes.service.js';
 import * as estoqueService from '../estoque/estoque.service.js';
 import * as doadoresService from '../doadores/doadores.service.js';
@@ -45,10 +46,12 @@ async function listarDistribuicoes(req, res) {
 
 async function formularioNovaDoacao(req, res) {
   const doadores = await doadoresService.listar({});
-  const itens = itensPorTipo(await estoqueService.listarItensParaSelecao());
+  const itens = await estoqueService.listarItensParaSelecao();
   res.render('doacoes/form', {
     title: 'Registrar doação',
     itens,
+    tipos: tiposParaView(),
+    unidades: UNIDADES_ITEM,
     doadores,
     erro: null,
     form: {},
@@ -62,10 +65,12 @@ async function criarDoacao(req, res) {
     res.redirect('/doacoes');
   } catch (err) {
     const doadores = await doadoresService.listar({});
-    const itens = itensPorTipo(await estoqueService.listarItensParaSelecao());
+    const itens = await estoqueService.listarItensParaSelecao();
     res.status(400).render('doacoes/form', {
       title: 'Registrar doação',
       itens,
+      tipos: tiposParaView(),
+      unidades: UNIDADES_ITEM,
       doadores,
       erro: err.message,
       form: req.body,

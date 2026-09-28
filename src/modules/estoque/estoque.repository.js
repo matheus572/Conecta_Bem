@@ -59,10 +59,30 @@ async function findItemById(id) {
 }
 
 /** Busca item pelo par nome+tipo (régua de unicidade — mensagem amigável). */
-async function findItemPorNomeTipo(nome, tipo) {
-  const [rows] = await pool.query(
+async function findItemPorNomeTipo(nome, tipo, conn = pool) {
+  const [rows] = await conn.query(
     'SELECT `id` FROM `item_doacao` WHERE `nome_item` = ? AND `tipo_doacao` = ? LIMIT 1',
     [nome, tipo],
+  );
+  return rows[0] || null;
+}
+
+/**
+ * Busca item pelo nome em QUALQUER tipo (a collation `utf8mb4_unicode_ci` da
+ * coluna ignora caixa E acentos — verificado em banco na Sprint 7 e registrado
+ * em docs/decisoes.md). Usado na criação automática via registro de doação.
+ *
+ * `forUpdate = true` (CHAMAR DENTRO DA TRANSAÇÃO, Sprint 7): força leitura
+ * atual e bloqueia o índice único — necessary porque, em REPEATABLE READ, um
+ * SELECT simples usa o snapshot da transação e NÃO enxerga o item recém-criado
+ * por outra transação ainda não commitada (corrida entre duas doações
+ * simultâneas do mesmo nome novo).
+ */
+async function findItemPorNome(nome, conn = pool, { forUpdate = false } = {}) {
+  const lock = forUpdate ? ' FOR UPDATE' : '';
+  const [rows] = await conn.query(
+    'SELECT `id`, `nome_item`, `tipo_doacao`, `unidade`, `ativo` FROM `item_doacao` WHERE `nome_item` = ? LIMIT 1' + lock,
+    [nome],
   );
   return rows[0] || null;
 }
@@ -95,8 +115,8 @@ async function atualizarItem(id, { nome, unidade }) {
   ]);
 }
 
-async function setItemAtivo(id, ativo) {
-  await pool.query('UPDATE `item_doacao` SET `ativo` = ? WHERE `id` = ?', [ativo ? 1 : 0, id]);
+async function setItemAtivo(id, ativo, conn = pool) {
+  await conn.query('UPDATE `item_doacao` SET `ativo` = ? WHERE `id` = ?', [ativo ? 1 : 0, id]);
 }
 
 // --- Saldo por item (RN03) ---
@@ -139,6 +159,7 @@ export {
   listar,
   listarItensAtivos,
   findItemById,
+  findItemPorNome,
   findItemPorNomeTipo,
   criarItem,
   criarEstoqueVazio,
