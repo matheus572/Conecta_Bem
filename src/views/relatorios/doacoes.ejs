@@ -78,3 +78,38 @@
     <% } %>
   </table>
 </div>
+
+<h2 class="h4 mt-4 mb-2">Detalhamento por item</h2>
+<div class="table-responsive">
+  <table class="table table-striped table-sm align-middle">
+    <thead>
+      <tr>
+        <th>Tipo</th>
+        <th>Item</th>
+        <th class="text-end">Nº doações</th>
+        <th class="text-end">Qtd recebida</th>
+        <th class="text-end">Nº distribuições</th>
+        <th class="text-end">Qtd distribuída</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!linhasItens.length) { %>
+        <tr>
+          <td colspan="6" class="text-center text-muted">
+            Nenhum dado encontrado para os filtros aplicados.
+          </td>
+        </tr>
+      <% } %>
+      <% linhasItens.forEach(function (l) { %>
+        <tr>
+          <td><%= l.rotulo_tipo %></td>
+          <td><%= l.nome_item %></td>
+          <td class="text-end"><%= l.num_doacoes %></td>
+          <td class="text-end"><%= l.total_recebida %></td>
+          <td class="text-end"><%= l.num_distribuicoes %></td>
+          <td class="text-end"><%= l.total_distribuida %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

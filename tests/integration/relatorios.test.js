@@ -5,6 +5,7 @@ import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { app } from '../../src/app.js';
 import { resetDatabase, closeDatabase, pool } from '../helpers/db.js';
 import { loginAgent } from '../helpers/auth.js';
+import { NOME_ITEM_GENERICO } from '../../src/utils/tiposDoacao.js';
 
 let admin;
 let colaborador;
@@ -31,20 +32,38 @@ async function seedDadosRelatorio() {
       ('João Santos', '93541134780', 1)`,
   );
 
-  await pool.query(
-    `INSERT INTO doacao (doador_id, tipo_doacao, quantidade, data_doacao) VALUES
-      (?, 'ALIMENTOS', 10, '2026-09-05'),
-      (?, 'ROUPAS', 4, '2026-09-06')`,
-    [doador.id, doador.id],
+  // Item específico (2 doações separadas devem somar no mesmo saldo) + genéricos.
+  const [[genRou]] = await pool.query(
+    `SELECT id FROM item_doacao WHERE nome_item = ? AND tipo_doacao = 'ROUPAS'`,
+    [NOME_ITEM_GENERICO.ROUPAS],
   );
-  await pool.query(`UPDATE estoque SET quantidade = quantidade + 10 WHERE tipo_doacao = 'ALIMENTOS'`);
-  await pool.query(`UPDATE estoque SET quantidade = quantidade + 4 WHERE tipo_doacao = 'ROUPAS'`);
+  const [leite] = await pool.query(
+    `INSERT INTO item_doacao (nome_item, tipo_doacao, unidade) VALUES ('Leite 1L', 'ALIMENTOS', 'L')`,
+  );
+  await pool.query('INSERT INTO estoque (item_id, quantidade, estoque_minimo) VALUES (?, 0, 0)', [
+    leite.insertId,
+  ]);
 
   await pool.query(
-    `INSERT INTO distribuicao (beneficiario_id, tipo_doacao, quantidade, data_distribuicao) VALUES
-      (1, 'ALIMENTOS', 3, '2026-09-10'),
-      (2, 'ALIMENTOS', 2, '2026-09-11')`,
+    `INSERT INTO doacao (doador_id, item_id, tipo_doacao, quantidade, data_doacao) VALUES
+      (?, ?, 'ALIMENTOS', 10, '2026-09-05'),
+      (?, ?, 'ROUPAS', 4, '2026-09-06')`,
+    [doador.id, leite.insertId, doador.id, genRou.id],
   );
+  await pool.query('UPDATE estoque SET quantidade = quantidade + 10 WHERE item_id = ?', [
+    leite.insertId,
+  ]);
+  await pool.query('UPDATE estoque SET quantidade = quantidade + 4 WHERE item_id = ?', [genRou.id]);
+
+  await pool.query(
+    `INSERT INTO distribuicao (beneficiario_id, item_id, tipo_doacao, quantidade, data_distribuicao) VALUES
+      (1, ?, 'ALIMENTOS', 3, '2026-09-10'),
+      (2, ?, 'ALIMENTOS', 2, '2026-09-11')`,
+    [leite.insertId, leite.insertId],
+  );
+  await pool.query('UPDATE estoque SET quantidade = quantidade - 5 WHERE item_id = ?', [
+    leite.insertId,
+  ]);
   await pool.query(
     `INSERT INTO atendimento (beneficiario_id, data_atendimento, descricao) VALUES
       (1, '2026-09-10 10:00:00', 'Atendimento inicial')`,
@@ -82,7 +101,7 @@ describe('UC12 — matriz de permissões (§12.2)', () => {
 describe('UC12 — geração com dados semeados', () => {
   beforeAll(seedDadosRelatorio);
 
-  it('relatório de doações por período retorna os totais esperados', async () => {
+  it('relatório de doações por período retorna os totais esperados (por tipo e por item)', async () => {
     const res = await admin.get('/relatorios/doacoes?inicio=2026-09-01&fim=2026-09-30');
     expect(res.status).toBe(200);
     expect(res.text).toContain('Alimentos');
@@ -91,6 +110,11 @@ describe('UC12 — geração com dados semeados', () => {
     expect(res.text).toContain('14');
     // Total distribuído: 3 + 2 = 5.
     expect(res.text).toContain('>5<');
+
+    // Nível de detalhe por item (Sprint 6).
+    expect(res.text).toContain('Detalhamento por item');
+    expect(res.text).toContain('Leite 1L');
+    expect(res.text).toContain(NOME_ITEM_GENERICO.ROUPAS);
   });
 
   it('relatório de doações fora do período não retorna dados', async () => {

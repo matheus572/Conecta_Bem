@@ -1,6 +1,5 @@
 // dashboard.service.js — consolidação dos indicadores (RF_29/UC14).
 import * as repository from './dashboard.repository.js';
-import { ROTULOS_TIPOS_DOACAO } from '../../utils/tiposDoacao.js';
 import { formatarData } from '../relatorios/relatorios.service.js';
 
 /**
@@ -15,7 +14,7 @@ async function indicadores() {
       repository.doacoesDoMes(),
       repository.totalVoluntariosAtivos(),
       repository.proximasCampanhas(),
-      repository.tiposEstoqueAbaixoMinimo(),
+      repository.itensEstoqueAbaixoMinimo(),
     ]);
 
   const campanhas = proximasCampanhas.map((c) => ({
@@ -23,9 +22,11 @@ async function indicadores() {
     periodo: `${formatarData(c.data_inicio)} a ${formatarData(c.data_fim)}`,
   }));
 
+  // Alerta por ITEM (Sprint 6): o rótulo é o próprio nome do item.
   const estoqueAbaixoMinimo = estoqueBaixo.map((e) => ({
+    item_id: e.item_id,
     tipo: e.tipo_doacao,
-    rotulo: ROTULOS_TIPOS_DOACAO[e.tipo_doacao] || e.tipo_doacao,
+    rotulo: e.nome_item,
     quantidade: Number(e.quantidade),
     minimo: Number(e.estoque_minimo),
   }));

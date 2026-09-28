@@ -63,6 +63,52 @@ async function resumoDoacoesDistribuidas({ inicio, fim, tipo }) {
   return rows;
 }
 
+// --- RF_26 (Sprint 6): detalhamento por ITEM ---
+
+async function resumoDoacoesRecebidasPorItem({ inicio, fim, tipo }) {
+  const { conditions, params } = filtroPeriodo('d.data_doacao', { inicio, fim });
+  if (tipo) {
+    conditions.push('d.tipo_doacao = ?');
+    params.push(tipo);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const [rows] = await pool.query(
+    `SELECT d.tipo_doacao,
+            COALESCE(i.nome_item, '(sem item identificado)') AS nome_item,
+            COUNT(*) AS num_doacoes,
+            COALESCE(SUM(d.quantidade), 0) AS total_recebida
+       FROM \`doacao\` d
+       LEFT JOIN \`item_doacao\` i ON i.id = d.item_id
+       ${where}
+      GROUP BY d.tipo_doacao, nome_item
+      ORDER BY d.tipo_doacao, nome_item`,
+    params,
+  );
+  return rows;
+}
+
+async function resumoDoacoesDistribuidasPorItem({ inicio, fim, tipo }) {
+  const { conditions, params } = filtroPeriodo('di.data_distribuicao', { inicio, fim });
+  if (tipo) {
+    conditions.push('di.tipo_doacao = ?');
+    params.push(tipo);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const [rows] = await pool.query(
+    `SELECT di.tipo_doacao,
+            COALESCE(i.nome_item, '(sem item identificado)') AS nome_item,
+            COUNT(*) AS num_distribuicoes,
+            COALESCE(SUM(di.quantidade), 0) AS total_distribuida
+       FROM \`distribuicao\` di
+       LEFT JOIN \`item_doacao\` i ON i.id = di.item_id
+       ${where}
+      GROUP BY di.tipo_doacao, nome_item
+      ORDER BY di.tipo_doacao, nome_item`,
+    params,
+  );
+  return rows;
+}
+
 // --- RF_27: atendimentos realizados por período ---
 // Três agregações por beneficiário (atendimentos, distribuições, matrículas);
 // a junção por beneficiário acontece no service, evitando contagem duplicada
@@ -154,6 +200,8 @@ async function campanhasConsolidadas({ inicio, fim, status }) {
 export {
   resumoDoacoesRecebidas,
   resumoDoacoesDistribuidas,
+  resumoDoacoesRecebidasPorItem,
+  resumoDoacoesDistribuidasPorItem,
   atendimentosPorBeneficiario,
   distribuicoesPorBeneficiario,
   matriculasPorBeneficiario,

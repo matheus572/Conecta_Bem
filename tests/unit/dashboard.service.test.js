@@ -1,5 +1,5 @@
 // dashboard.service.test.js — cálculo de cada indicador do painel (RF_29/UC14)
-// com o repository mockado (sem banco).
+// com o repository mockado (sem banco). Sprint 6: alerta por item.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../src/modules/dashboard/dashboard.repository.js', () => ({
@@ -7,7 +7,7 @@ vi.mock('../../src/modules/dashboard/dashboard.repository.js', () => ({
   doacoesDoMes: vi.fn(),
   totalVoluntariosAtivos: vi.fn(),
   proximasCampanhas: vi.fn(),
-  tiposEstoqueAbaixoMinimo: vi.fn(),
+  itensEstoqueAbaixoMinimo: vi.fn(),
 }));
 
 import * as repository from '../../src/modules/dashboard/dashboard.repository.js';
@@ -33,8 +33,8 @@ describe('dashboard — indicadores (RF_29)', () => {
         data_fim: new Date('2026-10-31T00:00:00Z'),
       },
     ]);
-    repo.tiposEstoqueAbaixoMinimo.mockResolvedValue([
-      { tipo_doacao: 'ALIMENTOS', quantidade: 2, estoque_minimo: 5 },
+    repo.itensEstoqueAbaixoMinimo.mockResolvedValue([
+      { item_id: 7, nome_item: 'Leite 1L', tipo_doacao: 'ALIMENTOS', quantidade: 2, estoque_minimo: 5 },
     ]);
 
     const dados = await service.indicadores();
@@ -45,7 +45,7 @@ describe('dashboard — indicadores (RF_29)', () => {
     expect(dados.proximasCampanhas).toHaveLength(1);
     expect(dados.proximasCampanhas[0].periodo).toBe('01/10/2026 a 31/10/2026');
     expect(dados.estoqueAbaixoMinimo).toEqual([
-      { tipo: 'ALIMENTOS', rotulo: 'Alimentos', quantidade: 2, minimo: 5 },
+      { item_id: 7, tipo: 'ALIMENTOS', rotulo: 'Leite 1L', quantidade: 2, minimo: 5 },
     ]);
     expect(dados.vazio).toBe(false);
   });
@@ -55,7 +55,7 @@ describe('dashboard — indicadores (RF_29)', () => {
     repo.doacoesDoMes.mockResolvedValue(0);
     repo.totalVoluntariosAtivos.mockResolvedValue(0);
     repo.proximasCampanhas.mockResolvedValue([]);
-    repo.tiposEstoqueAbaixoMinimo.mockResolvedValue([]);
+    repo.itensEstoqueAbaixoMinimo.mockResolvedValue([]);
 
     const dados = await service.indicadores();
 

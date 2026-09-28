@@ -28,15 +28,19 @@ function formatarData(data) {
   return `${d}/${m}/${y}`;
 }
 
-/** RF_26 — doações recebidas e distribuídas por período, consolidadas por tipo. */
+/** RF_26 — doações recebidas e distribuídas por período. Dois níveis
+ * (decisão da Sprint 6): consolidado por tipo (compatível com Sprint 5) +
+ * detalhamento por item. */
 async function relatorioDoacoes(filtros = {}) {
   const { inicio, fim } = normalizarPeriodo(filtros);
   const tipo = String(filtros.tipo || '').trim();
   if (tipo && !isTipoValido(tipo)) throw new Error('Tipo de doação inválido.');
 
-  const [recebidas, distribuidas] = await Promise.all([
+  const [recebidas, distribuidas, recebidasPorItem, distribuidasPorItem] = await Promise.all([
     repository.resumoDoacoesRecebidas({ inicio, fim, tipo }),
     repository.resumoDoacoesDistribuidas({ inicio, fim, tipo }),
+    repository.resumoDoacoesRecebidasPorItem({ inicio, fim, tipo }),
+    repository.resumoDoacoesDistribuidasPorItem({ inicio, fim, tipo }),
   ]);
 
   // Junta os dois agregados em uma linha por tipo (LEFT/RIGHT não suportado em
@@ -75,6 +79,36 @@ async function relatorioDoacoes(filtros = {}) {
   }
   linhas.push(...[...porTipo.values()].sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR')));
 
+  // Detalhamento por item (mesma lógica de merge, chaveada por tipo+item).
+  const porItem = new Map();
+  const garantirItem = (r) => {
+    const chave = `${r.tipo_doacao}|${r.nome_item}`;
+    if (!porItem.has(chave)) {
+      porItem.set(chave, {
+        rotulo_tipo: ROTULOS_TIPOS_DOACAO[r.tipo_doacao] || r.tipo_doacao,
+        nome_item: r.nome_item,
+        num_doacoes: 0,
+        total_recebida: 0,
+        num_distribuicoes: 0,
+        total_distribuida: 0,
+      });
+    }
+    return porItem.get(chave);
+  };
+  for (const r of recebidasPorItem) {
+    const linha = garantirItem(r);
+    linha.num_doacoes = Number(r.num_doacoes);
+    linha.total_recebida = Number(r.total_recebida);
+  }
+  for (const d of distribuidasPorItem) {
+    const linha = garantirItem(d);
+    linha.num_distribuicoes = Number(d.num_distribuicoes);
+    linha.total_distribuida = Number(d.total_distribuida);
+  }
+  const linhasItens = [...porItem.values()].sort(
+    (a, b) => a.rotulo_tipo.localeCompare(b.rotulo_tipo, 'pt-BR') || a.nome_item.localeCompare(b.nome_item, 'pt-BR'),
+  );
+
   const totais = linhas.reduce(
     (acc, l) => ({
       num_doacoes: acc.num_doacoes + l.num_doacoes,
@@ -85,7 +119,7 @@ async function relatorioDoacoes(filtros = {}) {
     { num_doacoes: 0, total_recebida: 0, num_distribuicoes: 0, total_distribuida: 0 },
   );
 
-  return { inicio, fim, tipo, linhas, totais };
+  return { inicio, fim, tipo, linhas, linhasItens, totais };
 }
 
 /** RF_27 — atendimentos realizados por período, por beneficiário. */

@@ -5,6 +5,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../src/modules/relatorios/relatorios.repository.js', () => ({
   resumoDoacoesRecebidas: vi.fn(),
   resumoDoacoesDistribuidas: vi.fn(),
+  resumoDoacoesRecebidasPorItem: vi.fn(),
+  resumoDoacoesDistribuidasPorItem: vi.fn(),
   atendimentosPorBeneficiario: vi.fn(),
   distribuicoesPorBeneficiario: vi.fn(),
   matriculasPorBeneficiario: vi.fn(),
@@ -22,6 +24,11 @@ beforeEach(() => {
 });
 
 describe('relatorioDoacoes (RF_26)', () => {
+  beforeEach(() => {
+    repo.resumoDoacoesRecebidasPorItem.mockResolvedValue([]);
+    repo.resumoDoacoesDistribuidasPorItem.mockResolvedValue([]);
+  });
+
   it('consolida recebidas e distribuídas por tipo, com totais', async () => {
     repo.resumoDoacoesRecebidas.mockResolvedValue([
       { tipo_doacao: 'ALIMENTOS', num_doacoes: 3, total_recebida: 10, num_doadores: 2 },
@@ -47,6 +54,37 @@ describe('relatorioDoacoes (RF_26)', () => {
       total_recebida: 10,
       num_distribuicoes: 3,
       total_distribuida: 7,
+    });
+  });
+
+  it('detalha por item, juntando recebidas e distribuídas pela chave tipo+item', async () => {
+    repo.resumoDoacoesRecebidas.mockResolvedValue([
+      { tipo_doacao: 'ALIMENTOS', num_doacoes: 2, total_recebida: 20, num_doadores: 1 },
+    ]);
+    repo.resumoDoacoesDistribuidas.mockResolvedValue([
+      { tipo_doacao: 'ALIMENTOS', num_distribuicoes: 1, total_distribuida: 8, num_beneficiarios: 1 },
+    ]);
+    repo.resumoDoacoesRecebidasPorItem.mockResolvedValue([
+      { tipo_doacao: 'ALIMENTOS', nome_item: 'Leite 1L', num_doacoes: 2, total_recebida: 20 },
+    ]);
+    repo.resumoDoacoesDistribuidasPorItem.mockResolvedValue([
+      { tipo_doacao: 'ALIMENTOS', nome_item: 'Leite 1L', num_distribuicoes: 1, total_distribuida: 8 },
+      { tipo_doacao: 'ALIMENTOS', nome_item: 'Arroz 5kg', num_distribuicoes: 1, total_distribuida: 5 },
+    ]);
+
+    const { linhasItens } = await service.relatorioDoacoes({});
+
+    expect(linhasItens.find((l) => l.nome_item === 'Leite 1L')).toMatchObject({
+      num_doacoes: 2,
+      total_recebida: 20,
+      num_distribuicoes: 1,
+      total_distribuida: 8,
+    });
+    expect(linhasItens.find((l) => l.nome_item === 'Arroz 5kg')).toMatchObject({
+      num_doacoes: 0,
+      total_recebida: 0,
+      num_distribuicoes: 1,
+      total_distribuida: 5,
     });
   });
 

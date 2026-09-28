@@ -59,6 +59,15 @@ const COLUNAS_DOACOES = [
   { header: 'Beneficiários', key: 'num_beneficiarios' },
 ];
 
+const COLUNAS_DOACOES_ITEM = [
+  { header: 'Tipo', key: 'rotulo_tipo' },
+  { header: 'Item', key: 'nome_item' },
+  { header: 'Nº doações', key: 'num_doacoes' },
+  { header: 'Qtd recebida', key: 'total_recebida' },
+  { header: 'Nº distribuições', key: 'num_distribuicoes' },
+  { header: 'Qtd distribuída', key: 'total_distribuida' },
+];
+
 async function doacoes(req, res) {
   const { inicio = '', fim = '', tipo = '', formato = '' } = req.query;
   const dados = await service.relatorioDoacoes({ inicio, fim, tipo });
@@ -66,8 +75,10 @@ async function doacoes(req, res) {
   if (formato === 'pdf' || formato === 'xlsx') {
     return responderExportacao(res, formato, 'relatorio-doacoes', {
       titulo: 'Relatório de Doações (recebidas e distribuídas)',
-      colunas: COLUNAS_DOACOES,
-      linhas: dados.linhas,
+      secoes: [
+        { subtitulo: 'Resumo por tipo', colunas: COLUNAS_DOACOES, linhas: dados.linhas },
+        { subtitulo: 'Detalhamento por item', colunas: COLUNAS_DOACOES_ITEM, linhas: dados.linhasItens },
+      ],
     });
   }
 

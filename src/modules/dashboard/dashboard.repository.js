@@ -41,13 +41,15 @@ async function proximasCampanhas(limite = 5) {
   return rows;
 }
 
-/** Tipos de doação cujo estoque está abaixo do mínimo configurado (RF_16/RF_S04). */
-async function tiposEstoqueAbaixoMinimo() {
+/** Itens cujo estoque está abaixo do mínimo configurado (RF_16/RF_S04 —
+ * Sprint 6: por item, não mais por tipo). Itens desativados não alertam. */
+async function itensEstoqueAbaixoMinimo() {
   const [rows] = await pool.query(
-    `SELECT tipo_doacao, quantidade, estoque_minimo
-       FROM \`estoque\`
-      WHERE \`quantidade\` < \`estoque_minimo\`
-      ORDER BY tipo_doacao`,
+    `SELECT i.id AS item_id, i.nome_item, i.tipo_doacao, e.quantidade, e.estoque_minimo
+       FROM \`estoque\` e
+       JOIN \`item_doacao\` i ON i.id = e.item_id
+      WHERE e.\`quantidade\` < e.\`estoque_minimo\` AND i.\`ativo\` = 1
+      ORDER BY i.nome_item`,
   );
   return rows;
 }
@@ -57,5 +59,5 @@ export {
   doacoesDoMes,
   totalVoluntariosAtivos,
   proximasCampanhas,
-  tiposEstoqueAbaixoMinimo,
+  itensEstoqueAbaixoMinimo,
 };

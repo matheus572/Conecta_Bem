@@ -5,11 +5,19 @@
 import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
 
+/** Normaliza o payload para uma lista de seções ({ subtitulo, colunas, linhas }). */
+function secoesDe(payload) {
+  if (Array.isArray(payload.secoes)) return payload.secoes;
+  return [{ subtitulo: null, colunas: payload.colunas, linhas: payload.linhas }];
+}
+
 /**
  * Gera um PDF simples (título + linhas no formato "coluna: valor"). Retorna
  * um Buffer. Aceentos usam a fonte padrão (Helvetica), que suporta Latin-1.
+ * Aceita uma seção única ({colunas, linhas}) ou várias ({secoes}).
  */
-async function gerarPdf({ titulo, colunas, linhas }) {
+async function gerarPdf({ titulo, ...resto }) {
+  const secoes = secoesDe(resto);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 40, size: 'A4' });
     const chunks = [];
@@ -20,13 +28,20 @@ async function gerarPdf({ titulo, colunas, linhas }) {
     doc.fontSize(16).text(titulo, { align: 'center' });
     doc.moveDown();
 
-    if (!linhas.length) {
-      doc.fontSize(11).text('Nenhum dado encontrado para os filtros aplicados.');
-    } else {
-      doc.fontSize(10);
-      for (const [i, linha] of linhas.entries()) {
-        if (i > 0) doc.moveDown(0.4);
-        doc.text(colunas.map((c) => `${c.header}: ${linha[c.key] ?? ''}`).join(' | '));
+    for (const [s, secao] of secoes.entries()) {
+      if (s > 0) doc.moveDown();
+      if (secao.subtitulo) {
+        doc.fontSize(12).text(secao.subtitulo);
+        doc.moveDown(0.3);
+      }
+      if (!secao.linhas.length) {
+        doc.fontSize(10).text('Nenhum dado encontrado para os filtros aplicados.');
+      } else {
+        doc.fontSize(9);
+        for (const [i, linha] of secao.linhas.entries()) {
+          if (i > 0) doc.moveDown(0.3);
+          doc.text(secao.colunas.map((c) => `${c.header}: ${linha[c.key] ?? ''}`).join(' | '));
+        }
       }
     }
 
@@ -41,13 +56,17 @@ async function gerarPdf({ titulo, colunas, linhas }) {
   });
 }
 
-/** Gera uma planilha .xlsx com cabeçalho em negrito. Retorna um Buffer. */
-async function gerarXlsx({ titulo, colunas, linhas }) {
+/** Gera uma planilha .xlsx com cabeçalho em negrito (uma aba por seção). */
+async function gerarXlsx({ titulo, ...resto }) {
+  const secoes = secoesDe(resto);
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet((titulo || 'Relatório').slice(0, 31));
-  sheet.addRow(colunas.map((c) => c.header)).font = { bold: true };
-  for (const linha of linhas) {
-    sheet.addRow(colunas.map((c) => linha[c.key] ?? ''));
+  for (const [i, secao] of secoes.entries()) {
+    const nome = ((secao.subtitulo || titulo || 'Relatório') + (i ? ` ${i + 1}` : '')).slice(0, 31);
+    const sheet = workbook.addWorksheet(nome);
+    sheet.addRow(secao.colunas.map((c) => c.header)).font = { bold: true };
+    for (const linha of secao.linhas) {
+      sheet.addRow(secao.colunas.map((c) => linha[c.key] ?? ''));
+    }
   }
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
