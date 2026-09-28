@@ -10,6 +10,7 @@
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import { pool } from '../src/config/db.js';
+import { TIPOS_DOACAO, NOME_ITEM_GENERICO } from '../src/utils/tiposDoacao.js';
 
 dotenv.config();
 
@@ -17,13 +18,21 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@conectabem.net';
 const ADMIN_NAME = process.env.ADMIN_NAME || 'Administrador';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
-const TIPOS_ESTOQUE = ['ALIMENTOS', 'ROUPAS', 'MOVEIS_UTENSILIOS', 'OUTROS'];
-
+// Garante, para cada tipo, o item genérico ("Outros [tipo]") com sua linha de
+// estoque zerada. Os nomes batem com migrations/024_backfill_item_generico.sql.
 async function seedEstoque() {
-  for (const tipo of TIPOS_ESTOQUE) {
+  for (const tipo of TIPOS_DOACAO) {
     await pool.query(
-      'INSERT IGNORE INTO `estoque` (`tipo_doacao`, `quantidade`, `estoque_minimo`) VALUES (?, 0, 0)',
-      [tipo],
+      'INSERT IGNORE INTO `item_doacao` (`nome_item`, `tipo_doacao`, `unidade`) VALUES (?, ?, ?)',
+      [NOME_ITEM_GENERICO[tipo], tipo, 'UN'],
+    );
+    const [[item]] = await pool.query(
+      'SELECT `id` FROM `item_doacao` WHERE `nome_item` = ? AND `tipo_doacao` = ?',
+      [NOME_ITEM_GENERICO[tipo], tipo],
+    );
+    await pool.query(
+      'INSERT IGNORE INTO `estoque` (`item_id`, `quantidade`, `estoque_minimo`) VALUES (?, 0, 0)',
+      [item.id],
     );
   }
 }

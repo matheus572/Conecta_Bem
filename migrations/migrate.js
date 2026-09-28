@@ -13,8 +13,30 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import mysql from 'mysql2/promise';
+import { env } from '../src/config/env.js';
 
 const MIGRATIONS_DIR = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Pool dedicado a migrations com `multipleStatements: true` — necessário a
+ * partir da Sprint 6, em que uma migration pode conter ALTER + backfill de
+ * dados em vários statements (ver 024_backfill_item_generico.sql).
+ * O pool da aplicação (src/config/db.js) permanece SEM essa opção.
+ */
+function createMigrationPool() {
+  return mysql.createPool({
+    host: env.db.host,
+    port: env.db.port,
+    user: env.db.user,
+    password: env.db.password,
+    database: env.db.database,
+    waitForConnections: true,
+    connectionLimit: 1,
+    charset: 'utf8mb4',
+    multipleStatements: true,
+  });
+}
 
 async function getAppliedMigrationNames(conn) {
   await conn.query(
@@ -28,8 +50,9 @@ async function getAppliedMigrationNames(conn) {
   return new Set(rows.map((row) => row.name));
 }
 
-/** Aplica as migrations pendentes. Não encerra o pool (quem chama é dono dele). */
-async function runMigrations(pool) {
+/** Aplica as migrations pendentes. Não encerra o pool (quem chama é dono
+ * dele). Se nenhum pool for informado, usa o pool dedicado multi-statement. */
+async function runMigrations(pool = null) {
   const files = fs
     .readdirSync(MIGRATIONS_DIR)
     .filter((f) => /^\d+.*\.sql$/.test(f) && f !== '001_init.sql')
@@ -38,7 +61,8 @@ async function runMigrations(pool) {
   const initFile = '001_init.sql';
   const orderedFiles = [initFile, ...files];
 
-  const conn = await pool.getConnection();
+  const effectivePool = pool || createMigrationPool();
+  const conn = await effectivePool.getConnection();
   try {
     const applied = await getAppliedMigrationNames(conn);
 
@@ -60,13 +84,13 @@ async function runMigrations(pool) {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
-  const { pool } = await import('../src/config/db.js');
+  const migrationPool = createMigrationPool();
   try {
-    await runMigrations(pool);
-    await pool.end();
+    await runMigrations(migrationPool);
+    await migrationPool.end();
   } catch (err) {
     console.error('[migrate] erro:', err);
-    await pool.end();
+    await migrationPool.end();
     process.exit(1);
   }
 }

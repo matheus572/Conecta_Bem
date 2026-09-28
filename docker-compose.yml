@@ -48,7 +48,10 @@ services:
       - "1025:1025"
 
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
     restart: unless-stopped
     command: sh -c "npm install && node migrations/migrate.js && node migrations/seed.js && npx nodemon -L src/server.js"
     environment:
