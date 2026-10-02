@@ -114,10 +114,15 @@ describe('Busca de estoque por nome do item (parcial, case-insensitive)', () => 
     expect(todos.status).toBe(200);
     expect((todos.text.match(/Leite 1L/g) || []).length).toBeGreaterThanOrEqual(2);
 
+    // Refinando por OUTROS, resta apenas UMA linha do homônimo nesse tipo — a
+    // view repete o nome em duas marcas por linha (célula e aria-label do
+    // input de mínimo), então 2 ocorrências = 1 item.
     const porTipo = await colaborador.get('/estoque?q=lei&tipo=OUTROS');
     expect(porTipo.status).toBe(200);
-    expect(porTipo.text).toContain('Leite 1L');
-    expect(porTipo.text).not.toContain('Outros Alimentos');
+    expect((porTipo.text.match(/Leite 1L/g) || []).length).toBe(2);
+
+    // Sem o refinamento, aparecem as duas linhas (ALIMENTOS inativo + OUTROS).
+    expect((todos.text.match(/Leite 1L/g) || []).length).toBeGreaterThanOrEqual(4);
   });
 
   it('busca sem correspondência informa estado vazio (sem erro)', async () => {

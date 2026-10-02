@@ -1,9 +1,8 @@
 // dashboard.test.js — UC14: painel de controle com a base de teste.
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { app } from '../../src/app.js';
-import { resetDatabase, closeDatabase, pool } from '../helpers/db.js';
+import { resetDatabase, closeDatabase, criarItem, pool } from '../helpers/db.js';
 import { loginAgent } from '../helpers/auth.js';
-import { NOME_ITEM_GENERICO } from '../../src/utils/tiposDoacao.js';
 
 let admin;
 let colaborador;
@@ -45,20 +44,18 @@ describe('UC14 — Visualizar Dashboard (RF_29/RF_S05)', () => {
       `INSERT INTO doador (tipo_doador, nome, documento, ativo) VALUES ('PF', 'Doador teste', '12345678901', 1)`,
     );
     const [[doador]] = await pool.query('SELECT id FROM doador LIMIT 1');
-    const [[itemAli]] = await pool.query(
-      `SELECT id FROM item_doacao WHERE nome_item = ? AND tipo_doacao = 'ALIMENTOS'`,
-      [NOME_ITEM_GENERICO.ALIMENTOS],
-    );
+    // Sprint 8: não há mais item genérico semeado; cria-se o item explicitamente.
+    const itemAliId = await criarItem('Arroz 5kg', 'ALIMENTOS', 'KG');
     await pool.query(
       'INSERT INTO doacao (doador_id, item_id, tipo_doacao, quantidade, data_doacao) VALUES (?, ?, ?, ?, CURDATE())',
-      [doador.id, itemAli.id, 'ALIMENTOS', 5],
+      [doador.id, itemAliId, 'ALIMENTOS', 5],
     );
     await pool.query(
       `INSERT INTO campanha (titulo, descricao, data_inicio, data_fim, status) VALUES
         ('Próxima campanha', 'Teste', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), 'ATIVA')`,
     );
-    // Estoque abaixo do mínimo por ITEM (Sprint 6): 0 < 10 no item genérico.
-    await pool.query('UPDATE estoque SET estoque_minimo = 10 WHERE item_id = ?', [itemAli.id]);
+    // Estoque abaixo do mínimo por ITEM: doação de 5 < mínimo 10 → alerta aparece.
+    await pool.query('UPDATE estoque SET quantidade = 5, estoque_minimo = 10 WHERE item_id = ?', [itemAliId]);
 
     const res = await admin.get('/');
     expect(res.status).toBe(200);
@@ -66,10 +63,10 @@ describe('UC14 — Visualizar Dashboard (RF_29/RF_S05)', () => {
     expect(res.text).toMatch(/Beneficiários ativos[\s\S]*?display-6 fw-bold">2</);
     expect(res.text).toMatch(/Doações no mês[\s\S]*?display-6 fw-bold">1</);
     expect(res.text).toMatch(/Voluntários ativos[\s\S]*?display-6 fw-bold">1</);
-    // 1 item abaixo do mínimo (item genérico de ALIMENTOS: 0 < 10) com destaque
+    // 1 item abaixo do mínimo (Arroz 5kg: 5 < 10) com destaque
     // e lista de campanhas.
     expect(res.text).toMatch(/Estoque abaixo do mínimo[\s\S]*?display-6 fw-bold">1</);
-    expect(res.text).toContain(NOME_ITEM_GENERICO.ALIMENTOS);
+    expect(res.text).toContain('Arroz 5kg');
     expect(res.text).toContain('Próxima campanha');
   });
 });

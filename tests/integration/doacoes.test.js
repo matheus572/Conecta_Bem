@@ -3,9 +3,8 @@
 // do mesmo item devem SOMAR no mesmo saldo) e a concorrência por item.
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { app } from '../../src/app.js';
-import { resetDatabase, closeDatabase, pool } from '../helpers/db.js';
+import { resetDatabase, closeDatabase, criarItem, pool } from '../helpers/db.js';
 import { loginAgent } from '../helpers/auth.js';
-import { NOME_ITEM_GENERICO } from '../../src/utils/tiposDoacao.js';
 
 beforeAll(async () => {
   await resetDatabase();
@@ -41,14 +40,6 @@ async function criarBeneficiario() {
     ['Beneficiario Teste', proximoCpf()],
   );
   return r.insertId;
-}
-
-async function itemGenerico(tipo) {
-  const [[row]] = await pool.query(
-    'SELECT id FROM item_doacao WHERE nome_item = ? AND tipo_doacao = ?',
-    [NOME_ITEM_GENERICO[tipo], tipo],
-  );
-  return row.id;
 }
 
 async function saldoEstoque(itemId) {
@@ -222,7 +213,7 @@ describe('UC05 — Doações com nome digitado e criação automática de item (
 
 describe('UC05 — Concorrência por item (SELECT ... FOR UPDATE)', () => {
   it('duas distribuições simultâneas do MESMO item nunca deixam o estoque negativo', async () => {
-    const itemId = await itemGenerico('OUTROS');
+    const itemId = await criarItem('Item concorrente', 'OUTROS');
     await pool.query('UPDATE estoque SET quantidade = 10 WHERE item_id = ?', [itemId]);
 
     const [beneficiarioA, beneficiarioB] = await Promise.all([criarBeneficiario(), criarBeneficiario()]);
@@ -259,7 +250,7 @@ describe('Matriz §12.2 — acesso do COLABORADOR a doações/estoque', () => {
     const colab = await loginAgent(app, 'colaborador@conectabem.net', 'colab123');
     const doadorId = await criarDoador();
     const beneficiarioId = await criarBeneficiario();
-    const itemId = await itemGenerico('ROUPAS');
+    const itemId = await criarItem('Roupas para mínimo', 'ROUPAS');
 
     expect((await colab.get('/doacoes')).status).toBe(200);
     expect((await colab.get('/doacoes/nova')).status).toBe(200);
@@ -287,9 +278,8 @@ describe('Matriz §12.2 — acesso do COLABORADOR a doações/estoque', () => {
     });
     expect(distribuicao.status).toBe(302);
 
-    // E o genérico de ROUPAS continua funcionando para o mínimo.
+    // E o mínimo por item (RF_16) segue configurável pelo COLABORADOR.
     expect(itemId).toBeTruthy();
-
     const minimo = await colab.put(`/estoque/${itemId}/minimo`).type('form').send({ estoque_minimo: '3' });
     expect(minimo.status).toBe(302);
   });

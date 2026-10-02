@@ -374,7 +374,7 @@ Os três pontos em aberto desta sprint (plano §8 itens 4 e 5; plano §9.3) fora
 
 ## Sprint 6 — Refatoração do estoque para granularidade por item
 
-### 33. Estoque passa a ser por ITEM (supera a decisão nº 8)
+### 33. Estoque passa a ser por ITEM (supera a decisão nº 8) — ⚠️ parcialmente substituída na Sprint 8
 - **Decisão**: confirmada com o time. Nova tabela `item_doacao` (`nome_item`,
   `tipo_doacao`, `unidade`, `ativo`, com `UNIQUE(nome_item, tipo_doacao)`) +
   `estoque` recriada por `item_id`. `doacao`/`distribuicao` ganham `item_id`
@@ -394,24 +394,21 @@ Os três pontos em aberto desta sprint (plano §8 itens 4 e 5; plano §9.3) fora
   `src/modules/doacoes/*`, `src/modules/campanhas/*` (Resultados RF_24
   selecionam item), views correspondentes.
 
-### 34. Dados históricos: item genérico "Outros [tipo]" recebe o saldo (backfill documentado)
-- **Decisão**: confirmada com o time. Na migration `024_backfill_item_generico.sql`,
-  para cada tipo é criado o item genérico (`NOME_ITEM_GENERICO` em
+### 34. Dados históricos: item genérico "Outros [tipo]" recebe o saldo — ✅ **SUBSTITUÍDA** na Sprint 8 (nº 44)
+- **Decisão (Sprint 6, SUBSTITUÍDA)**: na migration `024_backfill_item_generico.sql`,
+  para cada tipo era criado o item genérico (`NOME_ITEM_GENERICO` em
   `src/utils/tiposDoacao.js` — deve espelhar a migration); o saldo e o mínimo
-  por tipo de `estoque_legado` migram para a linha do genérico; doações e
-  distribuições históricas (`item_id NULL`) são vinculadas a ele. O genérico
-  permanece disponível como catch-all; novas movimentações referenciam item
-  específico.
-- **Motivo**: movimentações pré-Sprint 6 só tinham tipo — atribuí-las a um item
-  específico inventaria informação (briefing). Nenhum dado é apagado: o saldo
-  total é preservado e verificável contra `estoque_legado`.
-- **Nota**: nomes com pequenos ajustes gramaticais ao padrão literal proposto
-  ("Outros [tipo]"): `Outros Alimentos`, `Outros Roupas`,
-  `Outros Móveis e utensílios`, `Outros (diversos)` para o tipo `OUTROS`
-  (evitar "Outros Outros").
-- **Onde**: `migrations/024_backfill_item_generico.sql`,
-  `tests/integration/migracao-estoque.test.js` (reproduz o schema legado em um
-  banco descartável do db-test e verifica backfill + preservação).
+  por tipo de `estoque_legado` migravam para a linha do genérico; doações e
+  distribuições históricas (`item_id NULL`) eram vinculadas a ele. O genérico
+  permanecia disponível como catch-all.
+- **Motivo da decisão original**: movimentações pré-Sprint 6 só tinham tipo —
+  atribuí-las a um item específico inventaria informação.
+- **Substituição**: na Sprint 8 (nº 44), com a criação de item sob demanda no
+  formulário de doação (Sprint 7), o genérico deixou de ser necessário e sua
+  criação automática foi removida do seed e da migration.
+- **Onde**: o arquivo da migration permanece apenas como histórico — o INSERT
+  dos genéricos foi removido em 024; `NOME_ITEM_GENERICO` foi apagada de
+  `src/utils/tiposDoacao.js`.
 
 ### 35. Relatório de doações (RF_26) com os dois níveis na mesma tela
 - **Decisão**: confirmada com o time. Padrão continua consolidado por tipo
@@ -496,3 +493,32 @@ Os três pontos em aberto desta sprint (plano §8 itens 4 e 5; plano §9.3) fora
   2×/3× em sequência.
 - **Onde**: `estoque.service.resolverOuCriarItem`,
   `tests/integration/doacao-criacao-item.test.js`.
+
+---
+
+## Sprint 8 — Remoção dos itens genéricos "Outros [tipo]"
+
+### 44. Itens genéricos deixam de existir (substitui a nº 33 parcialmente e a nº 34)
+- **Decisão**: confirmada pelo briefing da sprint. As **tabelas transacionais
+  do banco de desenvolvimento foram zeradas manualmente via SQL direto** (dados
+  fictícios removidos, preservando apenas `usuario`) ANTES desta alteração de
+  código — por isso nenhuma migration destrutiva nova foi criada nesta sprint.
+  O código deixou de CRIAR os itens genéricos "Outros [tipo]":
+  - `migrations/seed.js` semeia somente o usuário administrador;
+  - o INSERT dos 4 genéricos foi removido de `024_backfill_item_generico.sql`
+    (os UPDATEs defensivos permanecem como no-op em bases novas);
+  - `NOME_ITEM_GENERICO` foi removida de `src/utils/tiposDoacao.js`.
+- **Motivo**: desde a Sprint 7 o item nasce sob demanda no formulário de
+  registro de doação — esse passa a ser o **único** caminho de criação de item
+  no fluxo operacional (o CRUD administrativo em `/estoque/itens` segue
+  disponível ao ADMINISTRADOR). RF_16 (alerta), RF_26 (relatório) e o
+  dashboard já são agregações/LEFT JOIN que toleram catálogo vazio — coberto
+  por testes de estado vazio.
+- **Nota sobre a tarefa "ocultar genéricos" (antecedente)**: o critério de
+  ocultação/toggle previsto em conversa anterior nunca foi implementado (a
+  sessão estava em modo plano) — com esta sprint tornou-se dispensável.
+- **Onde**: `migrations/seed.js`, `migrations/024_backfill_item_generico.sql`,
+  `src/utils/tiposDoacao.js`, `tests/helpers/db.js` (helper `criarItem` para os
+  testes), `tests/integration/catalogo-vazio.test.js` (novo). O teste
+  `tests/integration/migracao-estoque.test.js` foi removido — o cenário de
+  backfill de genéricos que ele exercitava não existe mais.

@@ -1,8 +1,7 @@
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { app } from '../../src/app.js';
-import { resetDatabase, closeDatabase, pool } from '../helpers/db.js';
+import { resetDatabase, closeDatabase, criarItem, pool } from '../helpers/db.js';
 import { loginAgent } from '../helpers/auth.js';
-import { NOME_ITEM_GENERICO } from '../../src/utils/tiposDoacao.js';
 
 beforeAll(async () => {
   await resetDatabase();
@@ -82,12 +81,10 @@ describe('UC11 ponta-a-ponta — campanha, voluntário e resultados', () => {
     expect(voluntarioId).toBeTruthy();
     expect(beneficiarioId).toBeTruthy();
 
-    // Saldo no item genérico de ALIMENTOS (estoque agora é por item — Sprint 6).
-    const [[itemAlimentos]] = await pool.query(
-      `SELECT id FROM item_doacao WHERE nome_item = ? AND tipo_doacao = 'ALIMENTOS'`,
-      [NOME_ITEM_GENERICO.ALIMENTOS],
-    );
-    await pool.query('UPDATE estoque SET quantidade = 100 WHERE item_id = ?', [itemAlimentos.id]);
+    // Saldo em um item de ALIMENTOS (Sprint 8: não há mais item genérico
+    // semeado; cria-se o item explicitamente).
+    const itemAlimentosId = await criarItem('Kit alimentos (campanha)', 'ALIMENTOS');
+    await pool.query('UPDATE estoque SET quantidade = 100 WHERE item_id = ?', [itemAlimentosId]);
 
     // 1. Criar campanha.
     const criarCampanha = await admin.post('/campanhas').type('form').send(campanha);
@@ -115,7 +112,7 @@ describe('UC11 ponta-a-ponta — campanha, voluntário e resultados', () => {
       .type('form')
       .send({
         beneficiario_id: beneficiarioId,
-        item_id: String(itemAlimentos.id),
+        item_id: String(itemAlimentosId),
         quantidade: '5',
         data_distribuicao: '2026-09-15',
       });
